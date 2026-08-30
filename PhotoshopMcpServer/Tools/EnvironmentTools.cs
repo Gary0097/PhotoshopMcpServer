@@ -13,44 +13,47 @@ public class EnvironmentTools(
     private const string DefaultPhotoshopPath = @"K:\TOOL\Adobe Photoshop 2026";
     private const string DefaultIllustratorPath = @"K:\TOOL\Adobe Illustrator 2026";
 
-    [McpServerTool]
+    [McpServerTool(Name = "duanxing_check_environment")]
     [Description(
-        "Runs the Duanxing deployment preflight for Codex, Photoshop 2026 and Illustrator 2026. " +
-        "GPT subscription/login and VPN availability require human confirmation.")]
+        "用中文检查端行作图环境：Codex、Photoshop 2026、Illustrator 2026、运行状态和脚本安全模式。" +
+        "GPT 购买/登录、VPN 和 Adobe 授权需要客户人工确认。")]
     public string CheckDuanxingEnvironment()
     {
         var photoshopPath = Environment.GetEnvironmentVariable("DUANXING_PHOTOSHOP_PATH")
             ?? DefaultPhotoshopPath;
         var illustratorPath = Environment.GetEnvironmentVariable("DUANXING_ILLUSTRATOR_PATH")
             ?? DefaultIllustratorPath;
-        var result = new
+        var machineReady = CommandExists("codex") &&
+            Directory.Exists(photoshopPath) &&
+            Directory.Exists(illustratorPath);
+        var result = new Dictionary<string, object>
         {
-            ready = CommandExists("codex") &&
-                Directory.Exists(photoshopPath) &&
-                Directory.Exists(illustratorPath),
-            codexInstalled = CommandExists("codex"),
-            photoshop2026 = new
+            ["自动检查结果"] = machineReady ? "通过" : "未通过",
+            ["Codex已安装"] = CommandExists("codex") ? "是" : "否",
+            ["Photoshop 2026"] = new Dictionary<string, object>
             {
-                installed = Directory.Exists(photoshopPath),
-                path = photoshopPath,
-                running = photoshopService.IsPhotoshopRunning()
+                ["已找到安装目录"] = Directory.Exists(photoshopPath) ? "是" : "否",
+                ["安装目录"] = photoshopPath,
+                ["当前正在运行"] = photoshopService.IsPhotoshopRunning() ? "是" : "否"
             },
-            illustrator2026 = new
+            ["Illustrator 2026"] = new Dictionary<string, object>
             {
-                installed = Directory.Exists(illustratorPath),
-                path = illustratorPath,
-                running = illustratorService.IsIllustratorRunning()
+                ["已找到安装目录"] = Directory.Exists(illustratorPath) ? "是" : "否",
+                ["安装目录"] = illustratorPath,
+                ["当前正在运行"] = illustratorService.IsIllustratorRunning() ? "是" : "否"
             },
-            manualChecks = new[]
+            ["需要人工确认"] = new[]
             {
-                "GPT plan/account purchased and Codex login verified",
-                "VPN dedicated network is connected",
-                "Photoshop 2026 and Illustrator 2026 licenses are activated"
+                "GPT 已购买，账号可以登录 Codex",
+                "VPN 专线已经连接",
+                "Photoshop 2026 和 Illustrator 2026 已激活授权"
             },
-            arbitraryPhotoshopScriptsEnabled = string.Equals(
+            ["任意Photoshop脚本模式"] = string.Equals(
                 Environment.GetEnvironmentVariable("DUANXING_ALLOW_ARBITRARY_SCRIPTS"),
                 "true",
                 StringComparison.OrdinalIgnoreCase)
+                ? "已开启（仅限授权开发调试）"
+                : "已关闭（生产安全模式）"
         };
         return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
     }
