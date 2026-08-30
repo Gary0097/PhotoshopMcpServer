@@ -13,6 +13,9 @@ public class TaskWorkspaceServiceTests : IDisposable
         "duanxing-tests",
         Guid.NewGuid().ToString("N"));
 
+    private TaskWorkspaceService CreateService()
+        => new(Path.Combine(_testRoot, "最近任务.json"));
+
     [Fact]
     public void PrepareTask_CreatesProtectedWorkingCopyAndCorrectPixels()
     {
@@ -20,7 +23,7 @@ public class TaskWorkspaceServiceTests : IDisposable
         var source = Path.Combine(_testRoot, "原图.tif");
         File.WriteAllText(source, "sample");
         var output = Path.Combine(_testRoot, "输出");
-        var service = new TaskWorkspaceService();
+        var service = CreateService();
 
         var record = service.PrepareTask(new DuanxingTaskRequest(
             source, output, "木纹无缝", 200, 200, 2540, "平铺", "TIFF", "张三"));
@@ -42,7 +45,7 @@ public class TaskWorkspaceServiceTests : IDisposable
         Directory.CreateDirectory(_testRoot);
         var source = Path.Combine(_testRoot, "原图.psb");
         File.WriteAllText(source, "sample");
-        var service = new TaskWorkspaceService();
+        var service = CreateService();
 
         var record = service.PrepareTask(new DuanxingTaskRequest(
             source, Path.Combine(_testRoot, "输出"), "大图", 500, 500, 5080,
@@ -58,7 +61,7 @@ public class TaskWorkspaceServiceTests : IDisposable
         Directory.CreateDirectory(_testRoot);
         var source = Path.Combine(_testRoot, "原图.png");
         File.WriteAllText(source, "sample");
-        var service = new TaskWorkspaceService();
+        var service = CreateService();
         var task = service.PrepareTask(new DuanxingTaskRequest(
             source, Path.Combine(_testRoot, "输出"), "复核", 100, 100, 1270,
             "不拼接", "PNG", "王五"));
@@ -80,7 +83,7 @@ public class TaskWorkspaceServiceTests : IDisposable
         Directory.CreateDirectory(_testRoot);
         var source = Path.Combine(_testRoot, "原图.jpg");
         File.WriteAllText(source, "sample");
-        var service = new TaskWorkspaceService();
+        var service = CreateService();
         var task = service.PrepareTask(new DuanxingTaskRequest(
             source, Path.Combine(_testRoot, "输出"), "待复核", 100, 100, 1270,
             "不拼接", "JPEG", "赵六"));
@@ -98,7 +101,7 @@ public class TaskWorkspaceServiceTests : IDisposable
         var generated = Path.Combine(_testRoot, "生成图.png");
         File.WriteAllText(source, "original");
         File.WriteAllText(generated, "ai-result");
-        var service = new TaskWorkspaceService();
+        var service = CreateService();
         var task = service.PrepareTask(new DuanxingTaskRequest(
             source, Path.Combine(_testRoot, "输出"), "AI补图", 100, 100, 1270,
             "不拼接", "PNG", "赵六"));
@@ -124,7 +127,7 @@ public class TaskWorkspaceServiceTests : IDisposable
         var generated = Path.Combine(_testRoot, "清晰图.jpg");
         File.WriteAllText(source, "original");
         File.WriteAllText(generated, "enhanced");
-        var service = new TaskWorkspaceService();
+        var service = CreateService();
         var task = service.PrepareTask(new DuanxingTaskRequest(
             source, Path.Combine(_testRoot, "输出"), "AI清晰", 100, 100, 1270,
             "不拼接", "JPEG", "王五"));
@@ -150,7 +153,7 @@ public class TaskWorkspaceServiceTests : IDisposable
         Directory.CreateDirectory(_testRoot);
         var source = Path.Combine(_testRoot, "原图.png");
         File.WriteAllText(source, "sample");
-        var service = new TaskWorkspaceService();
+        var service = CreateService();
         service.PrepareTask(new DuanxingTaskRequest(
             source, Path.Combine(_testRoot, "端行作图输出"), "第一次", 100, 100, 1270,
             "平铺", "TIFF", "张三"));
@@ -165,12 +168,44 @@ public class TaskWorkspaceServiceTests : IDisposable
     }
 
     [Fact]
+    public void FindMostRecentTask_DoesNotRequireOriginalPath()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var source = Path.Combine(_testRoot, "原图.png");
+        File.WriteAllText(source, "sample");
+        var service = CreateService();
+        service.PrepareTask(new DuanxingTaskRequest(
+            source, Path.Combine(_testRoot, "输出"), "第一项", 100, 100, 1270,
+            "平铺", "TIFF", "张三"));
+        var latest = service.PrepareTask(new DuanxingTaskRequest(
+            source, Path.Combine(_testRoot, "输出"), "最近一项", 200, 100, 2540,
+            "二分之一错位", "PSD", "李四"));
+
+        var found = new TaskWorkspaceService(Path.Combine(_testRoot, "最近任务.json"))
+            .FindMostRecentTask();
+
+        found.TaskId.Should().Be(latest.TaskId);
+        found.TaskName.Should().Be("最近一项");
+    }
+
+    [Fact]
+    public void FindMostRecentTask_WithoutHistory_ReturnsSimpleChineseInstruction()
+    {
+        var service = CreateService();
+
+        var action = () => service.FindMostRecentTask();
+
+        action.Should().Throw<InvalidOperationException>()
+            .WithMessage("*拖入一张原图*说“开始”*");
+    }
+
+    [Fact]
     public void FindLatestTaskForSource_WithoutHistory_ReturnsChineseError()
     {
         Directory.CreateDirectory(_testRoot);
         var source = Path.Combine(_testRoot, "新原图.png");
         File.WriteAllText(source, "sample");
-        var service = new TaskWorkspaceService();
+        var service = CreateService();
 
         var action = () => service.FindLatestTaskForSource(source);
 
@@ -186,7 +221,7 @@ public class TaskWorkspaceServiceTests : IDisposable
         var generated = Path.Combine(_testRoot, "AI结果.png");
         File.WriteAllText(source, "original");
         File.WriteAllText(generated, "generated");
-        var service = new TaskWorkspaceService();
+        var service = CreateService();
         var task = service.PrepareTask(new DuanxingTaskRequest(
             source, Path.Combine(_testRoot, "输出"), "复核摘要", 200, 100, 2540,
             "平铺", "TIFF", "张三"));
@@ -211,7 +246,7 @@ public class TaskWorkspaceServiceTests : IDisposable
         Directory.CreateDirectory(_testRoot);
         var source = Path.Combine(_testRoot, "原图.jpg");
         File.WriteAllText(source, "original");
-        var service = new TaskWorkspaceService();
+        var service = CreateService();
         var task = service.PrepareTask(new DuanxingTaskRequest(
             source, Path.Combine(_testRoot, "输出"), "原图保护", 100, 100, 1270,
             "不拼接", "JPEG", "李四"));
@@ -231,7 +266,7 @@ public class TaskWorkspaceServiceTests : IDisposable
         Directory.CreateDirectory(_testRoot);
         var source = Path.Combine(_testRoot, "原图.png");
         File.WriteAllText(source, "original");
-        var service = new TaskWorkspaceService();
+        var service = CreateService();
         var task = service.PrepareTask(new DuanxingTaskRequest(
             source, Path.Combine(_testRoot, "输出"), "绑定复核", 100, 100, 1270,
             "平铺", "TIFF", "张三"));
@@ -261,7 +296,7 @@ public class TaskWorkspaceServiceTests : IDisposable
         Directory.CreateDirectory(_testRoot);
         var source = Path.Combine(_testRoot, "原图.png");
         File.WriteAllText(source, "original");
-        var service = new TaskWorkspaceService();
+        var service = CreateService();
         var task = service.PrepareTask(new DuanxingTaskRequest(
             source, Path.Combine(_testRoot, "输出"), "空结果", 100, 100, 1270,
             "平铺", "TIFF", "张三"));
@@ -280,7 +315,7 @@ public class TaskWorkspaceServiceTests : IDisposable
         Directory.CreateDirectory(_testRoot);
         var source = Path.Combine(_testRoot, "原图.png");
         File.WriteAllText(source, "original");
-        var service = new TaskWorkspaceService();
+        var service = CreateService();
         var task = service.PrepareTask(new DuanxingTaskRequest(
             source, Path.Combine(_testRoot, "输出"), "POC样板", 200, 100, 2540,
             "平铺", "TIFF", "张三"));
@@ -312,7 +347,7 @@ public class TaskWorkspaceServiceTests : IDisposable
         Directory.CreateDirectory(_testRoot);
         var source = Path.Combine(_testRoot, "原图.jpg");
         File.WriteAllText(source, "original");
-        var service = new TaskWorkspaceService();
+        var service = CreateService();
         var task = service.PrepareTask(new DuanxingTaskRequest(
             source, Path.Combine(_testRoot, "输出"), "待完成样板", 100, 100, 1270,
             "不拼接", "JPEG", "李四"));

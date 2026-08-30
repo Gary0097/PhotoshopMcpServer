@@ -8,6 +8,8 @@ namespace PhotoshopMcpServer.Services;
 
 public sealed partial class TaskWorkspaceService : ITaskWorkspaceService
 {
+    private readonly string _recentTasksFile;
+
     private static readonly HashSet<string> SupportedInputExtensions = new(
         [".psd", ".psb", ".tif", ".tiff", ".png", ".jpg", ".jpeg", ".bmp"],
         StringComparer.OrdinalIgnoreCase);
@@ -15,6 +17,19 @@ public sealed partial class TaskWorkspaceService : ITaskWorkspaceService
     private static readonly HashSet<string> SupportedOutputFormats = new(
         ["PSD", "PSB", "TIFF", "PNG", "JPEG", "AI", "SVG", "PDF"],
         StringComparer.OrdinalIgnoreCase);
+
+    public TaskWorkspaceService()
+        : this(Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "端行作图助手",
+            "最近任务.json"))
+    {
+    }
+
+    public TaskWorkspaceService(string recentTasksFile)
+    {
+        _recentTasksFile = Path.GetFullPath(recentTasksFile);
+    }
 
     public DuanxingTaskRecord PrepareTask(DuanxingTaskRequest request)
     {
@@ -61,7 +76,43 @@ public sealed partial class TaskWorkspaceService : ITaskWorkspaceService
             request.Reviewer.Trim(),
             warnings);
         WriteJson(Path.Combine(taskDirectory, "task.json"), record);
+        RememberTask(taskDirectory);
         return record;
+    }
+
+    public DuanxingTaskRecord FindMostRecentTask()
+    {
+        if (!File.Exists(_recentTasksFile))
+            throw new InvalidOperationException("还没有最近任务，请先拖入一张原图并说“开始”。");
+
+        List<string> taskDirectories;
+        try
+        {
+            taskDirectories = JsonSerializer.Deserialize<List<string>>(
+                File.ReadAllText(_recentTasksFile)) ?? [];
+        }
+        catch (JsonException)
+        {
+            throw new InvalidOperationException("最近任务记录无法读取，请拖入原图后说“继续这张图”。");
+        }
+
+        foreach (var taskDirectory in taskDirectories)
+        {
+            try
+            {
+                return LoadTask(taskDirectory);
+            }
+            catch (IOException)
+            {
+                continue;
+            }
+            catch (InvalidOperationException)
+            {
+                continue;
+            }
+        }
+
+        throw new InvalidOperationException("最近任务已经移动或删除，请拖入原图后说“继续这张图”。");
     }
 
     public DuanxingReviewRecord SaveReview(
@@ -460,6 +511,37 @@ public sealed partial class TaskWorkspaceService : ITaskWorkspaceService
     {
         var json = JsonSerializer.Serialize(value, new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(path, json, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+    }
+
+    private void RememberTask(string taskDirectory)
+    {
+        List<string> taskDirectories = [];
+        if (File.Exists(_recentTasksFile))
+        {
+            try
+            {
+                taskDirectories = JsonSerializer.Deserialize<List<string>>(
+                    File.ReadAllText(_recentTasksFile)) ?? [];
+            }
+            catch (JsonException)
+            {
+                taskDirectories = [];
+            }
+        }
+
+        var fullTaskDirectory = Path.GetFullPath(taskDirectory);
+        taskDirectories.RemoveAll(path => string.Equals(
+            Path.GetFullPath(path),
+            fullTaskDirectory,
+            StringComparison.OrdinalIgnoreCase));
+        taskDirectories.Insert(0, fullTaskDirectory);
+        if (taskDirectories.Count > 20)
+            taskDirectories.RemoveRange(20, taskDirectories.Count - 20);
+
+        var recentDirectory = Path.GetDirectoryName(_recentTasksFile)
+            ?? throw new InvalidOperationException("无法保存最近任务记录。");
+        Directory.CreateDirectory(recentDirectory);
+        WriteJson(_recentTasksFile, taskDirectories);
     }
 
     private static string SanitizeName(string value)

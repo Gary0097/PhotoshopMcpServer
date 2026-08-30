@@ -30,7 +30,7 @@ public class WorkflowSelfTestRunnerTests : IDisposable
                 File.WriteAllText(outputPath, "photoshop-result");
                 return new PhotoshopScriptResult(true, outputPath, string.Empty);
             });
-        var taskService = new TaskWorkspaceService();
+        var taskService = new TaskWorkspaceService(Path.Combine(_testRoot, "最近任务.json"));
         var runner = new WorkflowSelfTestRunner(photoshop.Object, taskService);
 
         var result = runner.Run(source, Path.Combine(_testRoot, "完整流程结果"));

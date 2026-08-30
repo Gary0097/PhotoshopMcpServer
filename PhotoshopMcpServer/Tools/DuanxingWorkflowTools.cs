@@ -154,6 +154,27 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
         }
     }
 
+    [McpServerTool(Name = "duanxing_continue_most_recent_task")]
+    [Description(
+        "继续这台电脑上最近一次端行任务。客户只说“继续上次”时调用，" +
+        "不需要重新拖入原图，也不需要提供任务编号或目录。")]
+    public string 继续最近任务()
+    {
+        try
+        {
+            var task = taskWorkspaceService.FindMostRecentTask();
+            return SerializeTaskSummary(task);
+        }
+        catch (Exception exception)
+        {
+            return JsonSerializer.Serialize(new
+            {
+                成功 = false,
+                提示 = exception.Message
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+    }
+
     [McpServerTool(Name = "duanxing_save_review")]
     [Description("保存端行人工复核结论。只有明确批准后，任务才可以导出为生产版。")]
     public string 保存复核结论(
@@ -315,8 +336,8 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
             1.【开始】拖入原图后说：
             开始处理这张图：成品宽 200 毫米、高 200 毫米，精度 2540，复核人张三。其他按默认。
 
-            2.【继续】第二天重新打开后，再拖入同一张原图并说：
-            继续这张图上次的任务，直接继续。
+            2.【继续】第二天重新打开后直接说：
+            继续上次。
 
             3.【复核】看完结果后说：
             生成中文复核单。
@@ -327,4 +348,25 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
 
             如果不知道下一步，直接说：下一步做什么？
             """;
+
+    private static string SerializeTaskSummary(DuanxingTaskRecord task)
+    {
+        var taskDirectory = Directory.GetParent(task.OutputDirectory)?.FullName;
+        return JsonSerializer.Serialize(new
+        {
+            成功 = true,
+            提示 = "已找到最近任务。不要修改原图，请继续处理工作副本。",
+            任务目录 = taskDirectory,
+            task.TaskId,
+            task.Status,
+            任务名称 = task.TaskName,
+            成品规格 = $"宽 {task.WidthMillimeters} 毫米 × 高 {task.HeightMillimeters} 毫米，印刷精度 {task.Dpi}",
+            拼接方式 = task.TilingMode,
+            输出格式 = task.OutputFormat,
+            task.Reviewer,
+            工作副本 = task.WorkingCopy,
+            处理结果目录 = task.OutputDirectory,
+            下一步 = "说“直接继续”，或说明要修改的地方。"
+        }, new JsonSerializerOptions { WriteIndented = true });
+    }
 }

@@ -13,13 +13,16 @@ public class DuanxingWorkflowToolsTests : IDisposable
         "duanxing-workflow-tests",
         Guid.NewGuid().ToString("N"));
 
+    private TaskWorkspaceService CreateService()
+        => new(Path.Combine(_testRoot, "最近任务.json"));
+
     [Fact]
     public void SimplePrepareTask_UsesSafeChineseDefaults()
     {
         Directory.CreateDirectory(_testRoot);
         var source = Path.Combine(_testRoot, "木纹原图.png");
         File.WriteAllText(source, "sample");
-        var tools = new DuanxingWorkflowTools(new TaskWorkspaceService());
+        var tools = new DuanxingWorkflowTools(CreateService());
 
         var json = tools.极简开始作图(source, 200, 100, 2540, "张三");
 
@@ -38,7 +41,7 @@ public class DuanxingWorkflowToolsTests : IDisposable
         Directory.CreateDirectory(_testRoot);
         var source = Path.Combine(_testRoot, "木纹原图.png");
         File.WriteAllText(source, "sample");
-        var tools = new DuanxingWorkflowTools(new TaskWorkspaceService());
+        var tools = new DuanxingWorkflowTools(CreateService());
 
         var json = tools.极简开始作图(source, 0, 100, 2540, "张三");
 
@@ -53,7 +56,7 @@ public class DuanxingWorkflowToolsTests : IDisposable
         Directory.CreateDirectory(_testRoot);
         var source = Path.Combine(_testRoot, "木纹原图.png");
         File.WriteAllText(source, "sample");
-        var tools = new DuanxingWorkflowTools(new TaskWorkspaceService());
+        var tools = new DuanxingWorkflowTools(CreateService());
         tools.极简开始作图(source, 200, 100, 2540, "张三", "1/2错位", "PSD");
 
         var json = tools.继续这张图上次的任务(source);
@@ -68,12 +71,30 @@ public class DuanxingWorkflowToolsTests : IDisposable
     }
 
     [Fact]
+    public void ContinueMostRecentTask_NeedsNoFileOrTaskPath()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var source = Path.Combine(_testRoot, "木纹原图.png");
+        File.WriteAllText(source, "sample");
+        var tools = new DuanxingWorkflowTools(CreateService());
+        tools.极简开始作图(source, 200, 100, 2540, "张三");
+
+        var json = tools.继续最近任务();
+
+        using var document = JsonDocument.Parse(json);
+        var root = document.RootElement;
+        root.GetProperty("成功").GetBoolean().Should().BeTrue();
+        root.GetProperty("任务名称").GetString().Should().Contain("木纹原图");
+        root.GetProperty("下一步").GetString().Should().Contain("直接继续");
+    }
+
+    [Fact]
     public void ReviewCard_WithoutResult_TellsCustomerWhatToDo()
     {
         Directory.CreateDirectory(_testRoot);
         var source = Path.Combine(_testRoot, "木纹原图.png");
         File.WriteAllText(source, "sample");
-        var tools = new DuanxingWorkflowTools(new TaskWorkspaceService());
+        var tools = new DuanxingWorkflowTools(CreateService());
         var prepareJson = tools.极简开始作图(source, 200, 100, 2540, "张三");
         using var prepareDocument = JsonDocument.Parse(prepareJson);
         var taskDirectory = prepareDocument.RootElement.GetProperty("任务目录").GetString();
@@ -90,7 +111,7 @@ public class DuanxingWorkflowToolsTests : IDisposable
     [Fact]
     public void ChineseHelp_ReturnsOnlyFourDailyActionsWithoutTechnicalTerms()
     {
-        var tools = new DuanxingWorkflowTools(new TaskWorkspaceService());
+        var tools = new DuanxingWorkflowTools(CreateService());
 
         var help = tools.获取中文作图口令();
 
