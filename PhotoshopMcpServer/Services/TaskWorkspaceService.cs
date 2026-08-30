@@ -142,6 +142,51 @@ public sealed partial class TaskWorkspaceService : ITaskWorkspaceService
             ?? throw new InvalidOperationException("任务记录无法读取。");
     }
 
+    public DuanxingTaskRecord FindLatestTaskForSource(string sourceFile)
+    {
+        if (string.IsNullOrWhiteSpace(sourceFile) || !File.Exists(sourceFile))
+            throw new FileNotFoundException("找不到原图，请重新拖入原图后再试。", sourceFile);
+
+        var fullSourcePath = Path.GetFullPath(sourceFile);
+        var sourceDirectory = Path.GetDirectoryName(fullSourcePath)
+            ?? throw new InvalidOperationException("无法确定原图所在目录。");
+        var outputRoot = Path.Combine(sourceDirectory, "端行作图输出");
+        if (!Directory.Exists(outputRoot))
+            throw new InvalidOperationException("这张原图还没有默认任务，请先说“开始处理这张图”。");
+
+        var matchingTasks = new List<(DuanxingTaskRecord Task, DateTimeOffset CreatedAt)>();
+        foreach (var taskDirectory in Directory.GetDirectories(outputRoot))
+        {
+            var taskFile = Path.Combine(taskDirectory, "task.json");
+            if (!File.Exists(taskFile))
+                continue;
+            try
+            {
+                var task = LoadTask(taskDirectory);
+                if (string.Equals(
+                    Path.GetFullPath(task.SourceFile),
+                    fullSourcePath,
+                    StringComparison.OrdinalIgnoreCase))
+                    matchingTasks.Add((
+                        task,
+                        DateTimeOffset.TryParse(task.CreatedAt, out var createdAt)
+                            ? createdAt
+                            : File.GetLastWriteTimeUtc(taskFile)));
+            }
+            catch (JsonException)
+            {
+                continue;
+            }
+        }
+
+        if (matchingTasks.Count == 0)
+            throw new InvalidOperationException("没有找到这张原图的历史任务，请先说“开始处理这张图”。");
+        return matchingTasks
+            .OrderByDescending(item => item.CreatedAt)
+            .First()
+            .Task;
+    }
+
     public bool IsApproved(string taskDirectory)
     {
         var task = LoadTask(taskDirectory);

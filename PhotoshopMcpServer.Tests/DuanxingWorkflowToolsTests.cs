@@ -47,6 +47,25 @@ public class DuanxingWorkflowToolsTests : IDisposable
         document.RootElement.GetProperty("提示").GetString().Should().Contain("必须大于 0");
     }
 
+    [Fact]
+    public void ContinueLatestTask_ReturnsChineseSummaryWithoutTaskPathInput()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var source = Path.Combine(_testRoot, "木纹原图.png");
+        File.WriteAllText(source, "sample");
+        var tools = new DuanxingWorkflowTools(new TaskWorkspaceService());
+        tools.极简开始作图(source, 200, 100, 2540, "张三", "1/2错位", "PSD");
+
+        var json = tools.继续这张图上次的任务(source);
+
+        using var document = JsonDocument.Parse(json);
+        var root = document.RootElement;
+        root.GetProperty("成功").GetBoolean().Should().BeTrue();
+        root.GetProperty("成品规格").GetString().Should().Be("200 × 100 mm，2540 DPI");
+        root.GetProperty("拼接方式").GetString().Should().Be("1/2错位");
+        root.GetProperty("下一步").GetString().Should().Contain("直接做检查版");
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_testRoot))

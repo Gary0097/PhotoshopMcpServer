@@ -115,6 +115,45 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
         }
     }
 
+    [McpServerTool(Name = "duanxing_continue_latest_task")]
+    [Description(
+        "继续这张原图最近一次的端行任务，不需要客户提供任务目录。" +
+        "自动在原图旁的“端行作图输出”中查找，并返回中文任务状态和下一步。")]
+    public string 继续这张图上次的任务(
+        [Description("客户重新拖入的原图完整路径。")]
+        string 原图路径)
+    {
+        try
+        {
+            var task = taskWorkspaceService.FindLatestTaskForSource(原图路径);
+            var taskDirectory = Directory.GetParent(task.OutputDirectory)?.FullName;
+            return JsonSerializer.Serialize(new
+            {
+                成功 = true,
+                提示 = "已找到最近任务。不要修改原图，请继续处理工作副本。",
+                任务目录 = taskDirectory,
+                task.TaskId,
+                task.Status,
+                任务名称 = task.TaskName,
+                成品规格 = $"{task.WidthMillimeters} × {task.HeightMillimeters} mm，{task.Dpi} DPI",
+                拼接方式 = task.TilingMode,
+                输出格式 = task.OutputFormat,
+                task.Reviewer,
+                工作副本 = task.WorkingCopy,
+                处理结果目录 = task.OutputDirectory,
+                下一步 = "说“按这个任务直接做检查版”，或说明要修改的地方。"
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception exception)
+        {
+            return JsonSerializer.Serialize(new
+            {
+                成功 = false,
+                提示 = exception.Message
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+    }
+
     [McpServerTool(Name = "duanxing_save_review")]
     [Description("保存端行人工复核结论。只有明确批准后，任务才可以导出为生产版。")]
     public string 保存复核结论(

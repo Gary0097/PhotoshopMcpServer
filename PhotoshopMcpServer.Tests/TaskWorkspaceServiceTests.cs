@@ -142,6 +142,40 @@ public class TaskWorkspaceServiceTests : IDisposable
             .Should().Contain("旧复核自动失效");
     }
 
+    [Fact]
+    public void FindLatestTaskForSource_ReturnsNewestMatchingTask()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var source = Path.Combine(_testRoot, "原图.png");
+        File.WriteAllText(source, "sample");
+        var service = new TaskWorkspaceService();
+        service.PrepareTask(new DuanxingTaskRequest(
+            source, Path.Combine(_testRoot, "端行作图输出"), "第一次", 100, 100, 1270,
+            "平铺", "TIFF", "张三"));
+        var latest = service.PrepareTask(new DuanxingTaskRequest(
+            source, Path.Combine(_testRoot, "端行作图输出"), "第二次", 200, 100, 2540,
+            "1/2错位", "PSD", "李四"));
+
+        var found = service.FindLatestTaskForSource(source);
+
+        found.TaskId.Should().Be(latest.TaskId);
+        found.TaskName.Should().Be("第二次");
+    }
+
+    [Fact]
+    public void FindLatestTaskForSource_WithoutHistory_ReturnsChineseError()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var source = Path.Combine(_testRoot, "新原图.png");
+        File.WriteAllText(source, "sample");
+        var service = new TaskWorkspaceService();
+
+        var action = () => service.FindLatestTaskForSource(source);
+
+        action.Should().Throw<InvalidOperationException>()
+            .WithMessage("*还没有默认任务*");
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_testRoot))

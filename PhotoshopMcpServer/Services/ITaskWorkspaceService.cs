@@ -6,6 +6,7 @@ public interface ITaskWorkspaceService
 {
     DuanxingTaskRecord PrepareTask(DuanxingTaskRequest request);
     DuanxingTaskRecord LoadTask(string taskDirectory);
+    DuanxingTaskRecord FindLatestTaskForSource(string sourceFile);
     bool IsApproved(string taskDirectory);
     DuanxingAiResultRecord RegisterAiResult(
         string taskDirectory,
