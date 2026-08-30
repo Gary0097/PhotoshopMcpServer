@@ -589,7 +589,7 @@ public class DuanxingQuickActionTools(
             return SerializeResult(
                 true,
                 "检查版已经生成，但预览没有显示",
-                "说“给我看结果”重试预览；仍失败时联系实施人员。",
+                "说“给我看结果”重试预览；仍失败时说“生成故障报告”。",
                 checkResult);
         var reviewCard = new DuanxingWorkflowTools(taskWorkspaceService)
             .生成中文复核单(taskDirectory);

@@ -100,7 +100,7 @@ public sealed class PhotoshopService : IPhotoshopService, IDisposable
         catch (COMException comException)
         {
             throw new InvalidOperationException(
-                "Photoshop 没有完成当前操作。请检查是否有弹窗；关闭弹窗后重试，仍失败时联系实施人员。", comException);
+                "图片软件没有完成当前操作。请关闭弹窗后重试；仍失败时说“生成故障报告”。", comException);
         }
     }
 

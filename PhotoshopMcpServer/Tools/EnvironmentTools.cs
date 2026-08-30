@@ -16,8 +16,8 @@ public class EnvironmentTools(
 
     [McpServerTool(Name = "duanxing_check_environment", Title = "检查作图环境", ReadOnly = true)]
     [Description(
-        "用中文检查端行作图环境：Codex、Photoshop 2026、Illustrator 2026、运行状态和脚本安全模式。" +
-        "GPT 购买/登录、VPN 和 Adobe 授权需要客户人工确认。")]
+        "自动检查端行作图环境。检查通过时直接继续作图，不重复询问账号、网络、授权或安装路径；" +
+        "未通过时只返回缺少的一项和一个中文解决办法。")]
     public string CheckDuanxingEnvironment()
     {
         var photoshopPath = Environment.GetEnvironmentVariable("DUANXING_PHOTOSHOP_PATH")
@@ -29,6 +29,11 @@ public class EnvironmentTools(
             Directory.Exists(photoshopPath) &&
             Directory.Exists(illustratorPath) &&
             photoshopTypeLibraryReady;
+        var nextStep = GetEnvironmentNextStep(
+            CommandExists("codex"),
+            Directory.Exists(photoshopPath),
+            Directory.Exists(illustratorPath),
+            photoshopTypeLibraryReady);
         var result = new Dictionary<string, object>
         {
             ["自动检查结果"] = machineReady ? "通过" : "未通过",
@@ -36,24 +41,17 @@ public class EnvironmentTools(
             ["Photoshop 2026"] = new Dictionary<string, object>
             {
                 ["已找到安装目录"] = Directory.Exists(photoshopPath) ? "是" : "否",
-                ["安装目录"] = photoshopPath,
                 ["当前正在运行"] = photoshopService.IsPhotoshopRunning() ? "是" : "否",
                 ["64位自动控制文件"] = photoshopTypeLibraryReady
                     ? "正常"
-                    : "路径失效，请双击“修复Adobe自动控制.cmd”"
+                    : "需要修复"
             },
             ["Illustrator 2026"] = new Dictionary<string, object>
             {
                 ["已找到安装目录"] = Directory.Exists(illustratorPath) ? "是" : "否",
-                ["安装目录"] = illustratorPath,
                 ["当前正在运行"] = illustratorService.IsIllustratorRunning() ? "是" : "否"
             },
-            ["需要人工确认"] = new[]
-            {
-                "GPT 已购买，账号可以登录 Codex",
-                "VPN 专线已经连接",
-                "Photoshop 2026 和 Illustrator 2026 已激活授权"
-            },
+            ["下一步"] = nextStep,
             ["任意Photoshop脚本模式"] = string.Equals(
                 Environment.GetEnvironmentVariable("DUANXING_ALLOW_ARBITRARY_SCRIPTS"),
                 "true",
@@ -62,6 +60,23 @@ public class EnvironmentTools(
                 : "已关闭（生产安全模式）"
         };
         return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+    }
+
+    private static string GetEnvironmentNextStep(
+        bool codexReady,
+        bool photoshopReady,
+        bool illustratorReady,
+        bool automationReady)
+    {
+        if (!codexReady)
+            return "请先安装并登录 Codex，然后重新打开。";
+        if (!photoshopReady)
+            return "没有找到 Photoshop 2026，请让实施人员完成安装。";
+        if (!illustratorReady)
+            return "没有找到 Illustrator 2026，请让实施人员完成安装。";
+        if (!automationReady)
+            return "请关闭作图软件和 Codex，再双击“【客户双击这里】首次安装端行作图助手.cmd”。";
+        return "环境正常，直接继续作图。";
     }
 
     [McpServerTool(Name = "duanxing_generate_support_report", Title = "生成中文故障报告")]

@@ -202,6 +202,7 @@ public class DuanxingWorkflowToolsTests : IDisposable
         help.Should().NotContain("DPI");
         help.Should().NotContain("mm");
         help.Should().Contain("第一次系统只会问一次生产规格");
+        help.Should().Contain("生成故障报告");
     }
 
     public void Dispose()

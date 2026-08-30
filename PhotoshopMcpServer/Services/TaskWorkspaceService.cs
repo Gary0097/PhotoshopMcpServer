@@ -685,7 +685,7 @@ public sealed partial class TaskWorkspaceService : ITaskWorkspaceService
         catch (JsonException)
         {
             throw new InvalidOperationException(
-                "规格模板记录无法读取，请联系实施人员检查配置。");
+                "规格模板暂时无法读取。请重试一次；仍失败时说“生成故障报告”。");
         }
     }
 

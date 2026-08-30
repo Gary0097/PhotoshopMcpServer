@@ -178,8 +178,29 @@ try {
     if ($null -ne $helpResponse.error -or
         $helpResponse.result.isError -eq $true -or
         $helpResponse.result.content[0].text -notmatch '只需要记三句话' -or
-        $helpResponse.result.content[0].text -notmatch '按端行样板做') {
+        $helpResponse.result.content[0].text -notmatch '按端行样板做' -or
+        $helpResponse.result.content[0].text -notmatch '生成故障报告') {
         throw '中文帮助工具无法正常执行，请重新安装插件。'
+    }
+    Send-ProtocolMessage @{
+        jsonrpc = '2.0'
+        id = 7
+        method = 'tools/call'
+        params = @{
+            name = 'duanxing_check_environment'
+            arguments = @{}
+        }
+    }
+    $environmentResponse = $process.StandardOutput.ReadLine() | ConvertFrom-Json
+    $environmentPayload = $environmentResponse.result.content[0].text | ConvertFrom-Json
+    $environmentText = $environmentPayload | ConvertTo-Json -Depth 6
+    if ($null -ne $environmentResponse.error -or
+        $environmentResponse.result.isError -eq $true -or
+        $null -eq $environmentPayload.下一步 -or
+        $environmentText -match '需要人工确认|[A-Za-z]:\\TOOL' -or
+        $environmentPayload.'Photoshop 2026'.PSObject.Properties.Name -contains '安装目录' -or
+        $environmentPayload.'Illustrator 2026'.PSObject.Properties.Name -contains '安装目录') {
+        throw '环境检查向客户暴露了安装路径或重复人工确认。'
     }
     Send-ProtocolMessage @{
         jsonrpc = '2.0'

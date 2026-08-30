@@ -12,7 +12,7 @@ public class CustomerErrorFormatterTests
         var result = CustomerErrorFormatter.Format(
             new InvalidOperationException("RPC server is unavailable. HRESULT 0x800706BA"));
 
-        result.Should().Be("本次操作没有完成。请重试一次；仍失败时把当前画面发给实施人员。");
+        result.Should().Be("本次操作没有完成。请重试一次；仍失败时说“生成故障报告”。");
         result.Should().NotMatchRegex("HRESULT|0x[0-9A-Fa-f]+|RPC");
     }
 

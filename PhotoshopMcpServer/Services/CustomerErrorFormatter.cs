@@ -60,7 +60,7 @@ public static partial class CustomerErrorFormatter
     }
 
     private const string GenericMessage =
-        "本次操作没有完成。请重试一次；仍失败时把当前画面发给实施人员。";
+        "本次操作没有完成。请重试一次；仍失败时说“生成故障报告”。";
 
     [GeneratedRegex("[\\u4e00-\\u9fff]")]
     private static partial Regex ChineseText();

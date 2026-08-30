@@ -383,6 +383,7 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
             不满意就说“退回修改：哪里要改”。
             第二天接着做就说“继续上次”。
             不知道怎么办就说“下一步做什么”。
+            重试后还是不行就说“生成故障报告”。
             """;
 
     private string SerializeTaskSummary(DuanxingTaskRecord task)
