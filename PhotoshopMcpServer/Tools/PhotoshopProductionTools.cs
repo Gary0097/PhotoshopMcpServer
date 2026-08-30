@@ -81,6 +81,8 @@ public class PhotoshopProductionTools(
                 $"{SanitizeFileName(task.TaskName)}_平铺无缝检查.psd");
             var script = "(function(){" +
                 $"var doc=app.open(new File(\"{EscapePath(task.WorkingCopy)}\"));" +
+                $"doc.resizeImage(UnitValue({task.TargetWidthPixels},'px')," +
+                $"UnitValue({task.TargetHeightPixels},'px'),{task.Dpi},ResampleMethod.BICUBIC);" +
                 "if(doc.layers.length>1){doc.flatten();}" +
                 "var horizontal=Math.round(doc.width.as('px')/2);" +
                 "var vertical=Math.round(doc.height.as('px')/2);" +
@@ -116,6 +118,8 @@ public class PhotoshopProductionTools(
                 $"{SanitizeFileName(task.TaskName)}_二分之一错位检查.psd");
             var script = "(function(){" +
                 $"var source=app.open(new File(\"{EscapePath(task.WorkingCopy)}\"));" +
+                $"source.resizeImage(UnitValue({task.TargetWidthPixels},'px')," +
+                $"UnitValue({task.TargetHeightPixels},'px'),{task.Dpi},ResampleMethod.BICUBIC);" +
                 "if(source.layers.length>1){source.flatten();}" +
                 "var width=source.width.as('px'),height=source.height.as('px');" +
                 "source.selection.selectAll();source.selection.copy(true);" +
@@ -138,6 +142,116 @@ public class PhotoshopProductionTools(
         catch (Exception exception)
         {
             return $"无法生成 1/2 错位检查图：{exception.Message}";
+        }
+    }
+
+    [McpServerTool(Name = "duanxing_create_task_preview")]
+    [Description(
+        "一键生成端行工艺检查版。自动读取任务尺寸、DPI 和拼接方式：" +
+        "不拼接时生成规格化 PSD，平铺时生成无缝检查图，1/2 错位时生成错位检查图。")]
+    public string 一键生成工艺检查版(
+        [Description("包含 task.json 的端行任务目录。")]
+        string 任务目录)
+    {
+        try
+        {
+            var task = taskWorkspaceService.LoadTask(任务目录);
+            return task.TilingMode switch
+            {
+                "平铺" => 生成平铺无缝检查图(任务目录),
+                "1/2错位" => 生成二分之一错位检查图(任务目录),
+                _ => 按任务规格设置尺寸(任务目录)
+            };
+        }
+        catch (Exception exception)
+        {
+            return $"无法生成工艺检查版：{exception.Message}";
+        }
+    }
+
+    [McpServerTool(Name = "duanxing_create_extension_canvas")]
+    [Description(
+        "创建补图/扩展画布：按任务记录的目标像素扩展 Photoshop 工作副本画布，" +
+        "保留原图内容并把新增透明区域留给 AI 补图或人工修补。不会覆盖原图。")]
+    public string 创建补图扩展画布(
+        [Description("包含 task.json 的端行任务目录。")]
+        string 任务目录)
+    {
+        try
+        {
+            var task = taskWorkspaceService.LoadTask(任务目录);
+            var outputPath = Path.Combine(
+                task.OutputDirectory,
+                $"{SanitizeFileName(task.TaskName)}_{task.TargetWidthPixels}x{task.TargetHeightPixels}_补图画布.psd");
+            var script = "(function(){" +
+                $"var doc=app.open(new File(\"{EscapePath(task.WorkingCopy)}\"));" +
+                "var currentWidth=Math.round(doc.width.as('px'));" +
+                "var currentHeight=Math.round(doc.height.as('px'));" +
+                $"var targetWidth={task.TargetWidthPixels},targetHeight={task.TargetHeightPixels};" +
+                "if(targetWidth<currentWidth||targetHeight<currentHeight){" +
+                "throw new Error('目标画布不能小于原图，请检查成品尺寸和 DPI。');}" +
+                "doc.resizeCanvas(UnitValue(targetWidth,'px'),UnitValue(targetHeight,'px')," +
+                "AnchorPosition.MIDDLECENTER);" +
+                "var marker=doc.artLayers.add();marker.name='AI补图或人工修补区域';" +
+                "var options=new PhotoshopSaveOptions();options.layers=true;" +
+                $"doc.saveAs(new File(\"{EscapePath(outputPath)}\"),options,true,Extension.LOWERCASE);" +
+                $"return \"{EscapeJavaScript(outputPath)}\";" +
+                "})();";
+            var result = photoshopService.ExecuteJavaScriptWithResult(script);
+            if (!result.Success)
+                return $"创建补图画布失败：{result.ErrorMessage}";
+            return $"补图扩展画布已创建：{outputPath}\n" +
+                "新增透明区域可用于 AI 补图或人工修补，请保持原纹理方向和接缝连续。";
+        }
+        catch (Exception exception)
+        {
+            return $"无法创建补图扩展画布：{exception.Message}";
+        }
+    }
+
+    [McpServerTool(Name = "duanxing_create_sharpen_preview")]
+    [Description(
+        "生成基础清晰化预览：在工作副本上复制图层并使用 Photoshop USM 锐化，" +
+        "保留原始图层以便对比和回退。适合先做小样，不代表 AI 修复。")]
+    public string 生成基础清晰化预览(
+        [Description("包含 task.json 的端行任务目录。")]
+        string 任务目录,
+        [Description("锐化数量，1 到 500，建议先用 80。")]
+        double 锐化数量 = 80,
+        [Description("半径，0.1 到 250 像素，建议先用 1.2。")]
+        double 半径像素 = 1.2,
+        [Description("阈值，0 到 255，建议先用 2。")]
+        int 阈值 = 2)
+    {
+        try
+        {
+            if (锐化数量 is < 1 or > 500)
+                throw new ArgumentOutOfRangeException(nameof(锐化数量), "锐化数量必须在 1 到 500 之间。");
+            if (半径像素 is < 0.1 or > 250)
+                throw new ArgumentOutOfRangeException(nameof(半径像素), "锐化半径必须在 0.1 到 250 像素之间。");
+            if (阈值 is < 0 or > 255)
+                throw new ArgumentOutOfRangeException(nameof(阈值), "阈值必须在 0 到 255 之间。");
+            var task = taskWorkspaceService.LoadTask(任务目录);
+            var outputPath = Path.Combine(
+                task.OutputDirectory,
+                $"{SanitizeFileName(task.TaskName)}_基础清晰化预览.psd");
+            var script = "(function(){" +
+                $"var doc=app.open(new File(\"{EscapePath(task.WorkingCopy)}\"));" +
+                "var layer=doc.activeLayer.duplicate();layer.name='基础清晰化预览';" +
+                $"layer.applyUnSharpMask({Format(锐化数量)},{Format(半径像素)},{阈值});" +
+                "var options=new PhotoshopSaveOptions();options.layers=true;" +
+                $"doc.saveAs(new File(\"{EscapePath(outputPath)}\"),options,true,Extension.LOWERCASE);" +
+                $"return \"{EscapeJavaScript(outputPath)}\";" +
+                "})();";
+            var result = photoshopService.ExecuteJavaScriptWithResult(script);
+            if (!result.Success)
+                return $"清晰化预览生成失败：{result.ErrorMessage}";
+            return $"基础清晰化预览已生成：{outputPath}\n" +
+                $"参数：数量 {Format(锐化数量)}，半径 {Format(半径像素)} px，阈值 {阈值}。";
+        }
+        catch (Exception exception)
+        {
+            return $"无法生成清晰化预览：{exception.Message}";
         }
     }
 
@@ -267,6 +381,9 @@ public class PhotoshopProductionTools(
 
     private static string EscapeJavaScript(string value)
         => value.Replace("\\", "\\\\").Replace("\"", "\\\"");
+
+    private static string Format(double value)
+        => value.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture);
 
     private static string SanitizeFileName(string value)
     {

@@ -132,6 +132,64 @@ public class PhotoshopProductionToolsTests
         }
     }
 
+    [Theory]
+    [InlineData("平铺", "applyOffset")]
+    [InlineData("1/2错位", "pasteAt(width,-height/2)")]
+    [InlineData("不拼接", "resizeImage")]
+    public void OneClickPreview_SelectsWorkflowFromTask(string tilingMode, string expectedScript)
+    {
+        var task = CreateTask() with { TilingMode = tilingMode };
+        _taskWorkspaceService.Setup(service => service.LoadTask("task")).Returns(task);
+        _photoshopService.Setup(service => service.ExecuteJavaScriptWithResult(It.IsAny<string>()))
+            .Returns(new PhotoshopScriptResult(true, "ok", string.Empty));
+        var tools = new PhotoshopProductionTools(
+            _photoshopService.Object,
+            _taskWorkspaceService.Object);
+
+        tools.一键生成工艺检查版("task");
+
+        _photoshopService.Verify(service => service.ExecuteJavaScriptWithResult(
+            It.Is<string>(script => script.Contains(expectedScript))));
+    }
+
+    [Fact]
+    public void CreateExtensionCanvas_UsesRecordedTargetAndKeepsLayers()
+    {
+        _taskWorkspaceService.Setup(service => service.LoadTask("task")).Returns(CreateTask());
+        _photoshopService.Setup(service => service.ExecuteJavaScriptWithResult(It.IsAny<string>()))
+            .Returns(new PhotoshopScriptResult(true, "ok", string.Empty));
+        var tools = new PhotoshopProductionTools(
+            _photoshopService.Object,
+            _taskWorkspaceService.Object);
+
+        tools.创建补图扩展画布("task");
+
+        _photoshopService.Verify(service => service.ExecuteJavaScriptWithResult(
+            It.Is<string>(script =>
+                script.Contains("targetWidth=20000,targetHeight=20000") &&
+                script.Contains("resizeCanvas") &&
+                script.Contains("AI补图或人工修补区域"))));
+    }
+
+    [Fact]
+    public void CreateSharpenPreview_DuplicatesLayerAndUsesValidatedParameters()
+    {
+        _taskWorkspaceService.Setup(service => service.LoadTask("task")).Returns(CreateTask());
+        _photoshopService.Setup(service => service.ExecuteJavaScriptWithResult(It.IsAny<string>()))
+            .Returns(new PhotoshopScriptResult(true, "ok", string.Empty));
+        var tools = new PhotoshopProductionTools(
+            _photoshopService.Object,
+            _taskWorkspaceService.Object);
+
+        var result = tools.生成基础清晰化预览("task", 80, 1.2, 2);
+
+        result.Should().Contain("基础清晰化预览已生成");
+        _photoshopService.Verify(service => service.ExecuteJavaScriptWithResult(
+            It.Is<string>(script =>
+                script.Contains("activeLayer.duplicate") &&
+                script.Contains("applyUnSharpMask(80,1.2,2)"))));
+    }
+
     private static DuanxingTaskRecord CreateTask(string outputDirectory = @"D:\输出\任务\02_处理结果")
         => new(
             "DX-test",
