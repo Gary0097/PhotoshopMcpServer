@@ -95,11 +95,36 @@ try {
             $tool.description -notmatch '[\u4e00-\u9fff]') {
             throw '发现没有中文说明的工具，请联系实施人员。'
         }
+        $parameterNames = @(
+            $tool.inputSchema.properties.psobject.Properties |
+                ForEach-Object { $_.Name }
+        )
+        foreach ($parameterName in $parameterNames) {
+            if ($parameterName -notmatch '[\u4e00-\u9fff]') {
+                throw '发现不是中文的参数名称，请联系实施人员。'
+            }
+        }
+    }
+    Send-ProtocolMessage @{
+        jsonrpc = '2.0'
+        id = 3
+        method = 'tools/call'
+        params = @{
+            name = 'duanxing_get_chinese_prompts'
+            arguments = @{}
+        }
+    }
+    $helpResponse = $process.StandardOutput.ReadLine() | ConvertFrom-Json
+    if ($null -ne $helpResponse.error -or
+        $helpResponse.result.isError -eq $true -or
+        $helpResponse.result.content[0].text -notmatch '端行作图只需要四步') {
+        throw '中文帮助工具无法正常执行，请重新安装插件。'
     }
     Write-Host ''
     Write-Host 'Codex 工具列表检查通过。' -ForegroundColor Green
     Write-Host "客户模式工具数量：$($tools.Count)"
     Write-Host '一句话开始、照上次规格、继续、查看、通过、退回和导出入口均正常。'
+    Write-Host '所有工具说明和参数名称均为中文，四步中文帮助可以正常调用。'
     Write-Host '底层任意脚本和旧的不完整入口均未加载。'
 }
 finally {
