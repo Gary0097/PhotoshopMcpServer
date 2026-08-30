@@ -224,7 +224,7 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
     [McpServerTool(Name = "duanxing_get_review_card")]
     [Description(
         "生成客户看得懂的中文复核单：汇总最新结果、原图保护、AI 记录、当前批准状态和必须人工检查的项目。" +
-        "展示后只让客户回答“通过”或“退回修改”。")]
+        "展示后只让客户回答“通过并导出”或“退回修改”。")]
     public string 生成中文复核单(
         [Description("包含 task.json 的端行任务目录。")]
         string 任务目录)
@@ -251,7 +251,7 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
                 需要人工检查 = summary.ManualChecklist,
                 请回答 = summary.ResultFileCount == 0
                     ? "请先生成检查版，暂时不能复核。"
-                    : "请只回答：通过，或退回修改并说明哪里要改。"
+                    : "请只回答：通过并导出，或退回修改并说明哪里要改。"
             }, new JsonSerializerOptions { WriteIndented = true });
         }
         catch (Exception exception)
@@ -368,28 +368,21 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
     }
 
     [McpServerTool(Name = "duanxing_get_chinese_prompts")]
-    [Description("返回端行员工日常只需使用的四步中文作图菜单。用户说“帮助”“怎么用”或还没有任何任务时调用。")]
+    [Description("返回端行员工最快只需两句话的中文作图菜单。用户说“帮助”“怎么用”或还没有任何任务时调用。")]
     public string 获取中文作图口令()
         => """
-            最简单：拖入原图，只说“做这张”。
+            端行作图最快只需要两句话：
+
+            1. 拖入原图后说：
+            做这张。
             第一次系统只会问一次生产规格；以后自动沿用上次规格。
 
-            端行作图只需要四步，全程说中文：
+            2. 看完预览和复核单后说：
+            通过并导出。
 
-            1.【开始】拖入原图后说：
-            做这张。
-
-            2.【继续】第二天重新打开后直接说：
-            继续上次。
-
-            3.【复核】看完结果后说：
-            通过。
-            如果不满意就说“退回修改：哪里要改”。
-
-            4.【导出】通过后说：
-            直接导出生产版。
-
-            如果不知道下一步，直接说：下一步做什么？
+            不满意就说“退回修改：哪里要改”。
+            第二天接着做就说“继续上次”。
+            不知道怎么办就说“下一步做什么”。
             """;
 
     private string SerializeTaskSummary(DuanxingTaskRecord task)

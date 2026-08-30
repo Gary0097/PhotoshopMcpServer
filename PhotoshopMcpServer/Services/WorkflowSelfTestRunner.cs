@@ -52,11 +52,11 @@ public sealed class WorkflowSelfTestRunner(
         if (previewFile == null)
             throw new InvalidOperationException($"没有生成 Codex 复核预览：{reviewPreviewMessage}");
 
-        var review = taskWorkspaceService.SaveReview(
-            taskDirectory,
-            "现场自检",
-            true,
-            "端行完整流程自检自动批准测试文件。");
+        var approvalAndExportMessage = quickTools.批准并导出最近结果();
+        using var approvalAndExportDocument = JsonDocument.Parse(approvalAndExportMessage);
+        if (!approvalAndExportDocument.RootElement.GetProperty("成功").GetBoolean())
+            throw new InvalidOperationException(
+                $"通过并导出快捷入口失败：{approvalAndExportMessage}");
         var approvedFile = taskWorkspaceService.GetApprovedResultFile(taskDirectory);
         if (!string.Equals(
             Path.GetFullPath(reviewFile),
@@ -64,7 +64,6 @@ public sealed class WorkflowSelfTestRunner(
             StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("复核批准没有绑定到刚生成的检查版。");
 
-        var exportMessage = tools.一键导出生产版(taskDirectory);
         var productionDirectory = Path.Combine(taskDirectory, "04_生产版");
         var productionFile = Directory.Exists(productionDirectory)
             ? Directory.GetFiles(productionDirectory, "*.tif")
@@ -72,7 +71,8 @@ public sealed class WorkflowSelfTestRunner(
                 .FirstOrDefault()
             : null;
         if (productionFile == null)
-            throw new InvalidOperationException($"没有生成 TIFF 生产版：{exportMessage}");
+            throw new InvalidOperationException(
+                $"通过并导出后没有生成 TIFF 生产版：{approvalAndExportMessage}");
 
         var sourceUnchanged = CalculateSha256(sourcePath) == sourceHashBefore;
         if (!sourceUnchanged)
@@ -83,7 +83,7 @@ public sealed class WorkflowSelfTestRunner(
         var messages = new List<string>
         {
             "已建立中文任务目录并创建工作副本。",
-            "已生成平铺检查版并绑定人工复核记录。",
+            "已通过一句“通过并导出”绑定人工复核记录并生成生产版。",
             "已同时生成可在 Codex 中查看的轻量预览和中文复核单。",
             "已导出 TIFF 生产版。",
             "已生成材料齐全的中文 POC 交付报告。",
@@ -101,7 +101,7 @@ public sealed class WorkflowSelfTestRunner(
             previewFile,
             productionFile,
             deliveryReport.ReportFile,
-            review.Status,
+            taskWorkspaceService.BuildReviewSummary(taskDirectory).ReviewStatus,
             messages);
     }
 

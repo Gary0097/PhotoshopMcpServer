@@ -47,6 +47,7 @@ public class WorkflowSelfTestRunnerTests : IDisposable
         File.ReadAllText(result.DeliveryReport).Should().Contain("材料齐全，等待双方签字");
         result.ReviewStatus.Should().Be("已批准，可导出生产版");
         result.Messages.Should().Contain(message => message.Contains("预览和中文复核单"));
+        result.Messages.Should().Contain(message => message.Contains("通过并导出"));
         taskService.IsResultApproved(result.TaskDirectory, result.ReviewFile).Should().BeTrue();
     }
 

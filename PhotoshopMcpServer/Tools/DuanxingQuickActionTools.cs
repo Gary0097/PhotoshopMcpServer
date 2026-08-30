@@ -201,6 +201,46 @@ public class DuanxingQuickActionTools(
         }
     }
 
+    [McpServerTool(Name = "duanxing_approve_and_export_latest")]
+    [Description(
+        "把人工复核通过和生产导出合并为一次安全操作。客户看完预览后明确说“通过并导出”时调用；" +
+        "自动把批准绑定到最近结果及校验值，再按任务格式导出生产版。未明确通过时禁止调用。")]
+    public string 批准并导出最近结果()
+    {
+        try
+        {
+            var task = taskWorkspaceService.FindMostRecentTask();
+            var taskDirectory = GetTaskDirectory(task);
+            taskWorkspaceService.SaveReview(
+                taskDirectory,
+                task.Reviewer,
+                true,
+                "客户确认通过并要求导出");
+            var productionTools = new PhotoshopProductionTools(
+                photoshopService,
+                taskWorkspaceService);
+            var exportResult = productionTools.一键导出生产版(taskDirectory);
+            if (OperationFailed(exportResult))
+                return SerializeResult(
+                    false,
+                    "通过结论已经保存，但生产版没有导出",
+                    "说“继续上次”重试导出；如果提示已有同名文件，请联系实施人员确认版本。",
+                    exportResult);
+            return SerializeResult(
+                true,
+                "最新结果已复核通过，生产版也已导出",
+                "需要交付材料时说“生成中文交付报告”。",
+                exportResult);
+        }
+        catch (Exception exception)
+        {
+            return SerializeResult(
+                false,
+                "没有完成通过和导出",
+                exception.Message);
+        }
+    }
+
     [McpServerTool(Name = "duanxing_reject_latest_result")]
     [Description(
         "退回最近端行任务的最新处理结果。客户说“退回修改”时调用，" +
