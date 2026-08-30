@@ -115,6 +115,41 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
         }
     }
 
+    [McpServerTool(Name = "duanxing_prepare_like_recent")]
+    [Description(
+        "把客户刚拖入的新原图按最近任务的成品尺寸、印刷精度、拼接方式和输出格式建立新任务。" +
+        "客户说“照上次规格做”“这张和上一张一样”时调用，不再重复询问已有生产参数。")]
+    public string 照上次规格开始作图(
+        [Description("客户刚拖入的新原图完整路径。")]
+        string 原图路径,
+        [Description("复核人有变化时填写；留空则沿用最近任务的复核人。")]
+        string 复核人 = "")
+    {
+        try
+        {
+            var recent = taskWorkspaceService.FindMostRecentTask();
+            var effectiveReviewer = string.IsNullOrWhiteSpace(复核人)
+                ? recent.Reviewer
+                : 复核人.Trim();
+            return 极简开始作图(
+                原图路径,
+                recent.WidthMillimeters,
+                recent.HeightMillimeters,
+                recent.Dpi,
+                effectiveReviewer,
+                recent.TilingMode,
+                recent.OutputFormat);
+        }
+        catch (Exception exception)
+        {
+            return JsonSerializer.Serialize(new
+            {
+                成功 = false,
+                提示 = exception.Message
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+    }
+
     [McpServerTool(Name = "duanxing_continue_latest_task")]
     [Description(
         "继续这张原图最近一次的端行任务，不需要客户提供任务目录。" +

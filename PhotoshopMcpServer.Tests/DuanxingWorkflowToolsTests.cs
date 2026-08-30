@@ -89,6 +89,49 @@ public class DuanxingWorkflowToolsTests : IDisposable
     }
 
     [Fact]
+    public void PrepareLikeRecent_ReusesProductionSpecificationsForNewImage()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var firstSource = Path.Combine(_testRoot, "第一张.png");
+        var newSource = Path.Combine(_testRoot, "新图.png");
+        File.WriteAllText(firstSource, "first");
+        File.WriteAllText(newSource, "new");
+        var service = CreateService();
+        var tools = new DuanxingWorkflowTools(service);
+        tools.极简开始作图(firstSource, 320, 180, 5080, "张三", "二分之一错位", "PSB");
+
+        var json = tools.照上次规格开始作图(newSource, "李四");
+
+        using var document = JsonDocument.Parse(json);
+        var root = document.RootElement;
+        root.GetProperty("成功").GetBoolean().Should().BeTrue();
+        var taskDirectory = root.GetProperty("任务目录").GetString();
+        var task = service.LoadTask(taskDirectory);
+        task.SourceFile.Should().Be(Path.GetFullPath(newSource));
+        task.WidthMillimeters.Should().Be(320);
+        task.HeightMillimeters.Should().Be(180);
+        task.Dpi.Should().Be(5080);
+        task.TilingMode.Should().Be("1/2错位");
+        task.OutputFormat.Should().Be("PSB");
+        task.Reviewer.Should().Be("李四");
+    }
+
+    [Fact]
+    public void PrepareLikeRecent_WithoutHistory_DoesNotGuessSpecifications()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var source = Path.Combine(_testRoot, "新图.png");
+        File.WriteAllText(source, "new");
+        var tools = new DuanxingWorkflowTools(CreateService());
+
+        var json = tools.照上次规格开始作图(source);
+
+        using var document = JsonDocument.Parse(json);
+        document.RootElement.GetProperty("成功").GetBoolean().Should().BeFalse();
+        document.RootElement.GetProperty("提示").GetString().Should().Contain("还没有最近任务");
+    }
+
+    [Fact]
     public void ReviewCard_WithoutResult_TellsCustomerWhatToDo()
     {
         Directory.CreateDirectory(_testRoot);
