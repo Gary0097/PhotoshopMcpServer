@@ -22,7 +22,7 @@ public sealed class PhotoshopService : IPhotoshopService, IDisposable
     private static object GetActiveComObject(string progId)
     {
         var clsid = Type.GetTypeFromProgID(progId)?.GUID
-            ?? throw new InvalidOperationException($"Cannot find CLSID for ProgID: {progId}");
+            ?? throw new InvalidOperationException("没有找到 Photoshop 自动控制接口，请重新运行一键安装。");
         GetActiveObject(ref clsid, IntPtr.Zero, out var instance);
         return instance;
     }
@@ -54,10 +54,10 @@ public sealed class PhotoshopService : IPhotoshopService, IDisposable
 
         var photoshopType = Type.GetTypeFromProgID(PhotoshopProgId)
             ?? throw new InvalidOperationException(
-                "Photoshop is not installed or its COM registration is missing.");
+                "没有找到 Photoshop，或自动控制接口尚未就绪。请先启动一次 Photoshop，再重新运行一键安装。");
 
         _photoshopApplication = Activator.CreateInstance(photoshopType)
-            ?? throw new InvalidOperationException("Failed to create Photoshop COM instance.");
+            ?? throw new InvalidOperationException("Photoshop 启动失败，请确认软件已激活且当前没有许可弹窗。");
     }
 
     private void ConnectToRunningInstance()
@@ -69,7 +69,7 @@ public sealed class PhotoshopService : IPhotoshopService, IDisposable
         catch (COMException comException)
         {
             throw new InvalidOperationException(
-                "Failed to connect to running Photoshop instance.", comException);
+                "无法连接已经打开的 Photoshop。请保存工作，完全关闭 Photoshop 后重试。", comException);
         }
     }
 
@@ -84,7 +84,7 @@ public sealed class PhotoshopService : IPhotoshopService, IDisposable
             LaunchPhotoshop();
 
         return _photoshopApplication
-            ?? throw new InvalidOperationException("Could not connect to Photoshop.");
+            ?? throw new InvalidOperationException("无法连接 Photoshop。请保存工作，完全关闭 Photoshop 后重试。");
     }
 
     public string ExecuteJavaScript(string script)
@@ -100,7 +100,7 @@ public sealed class PhotoshopService : IPhotoshopService, IDisposable
         catch (COMException comException)
         {
             throw new InvalidOperationException(
-                $"Photoshop JavaScript execution failed: {comException.Message}", comException);
+                "Photoshop 没有完成当前操作。请检查是否有弹窗；关闭弹窗后重试，仍失败时联系实施人员。", comException);
         }
     }
 
@@ -135,7 +135,7 @@ public sealed class PhotoshopService : IPhotoshopService, IDisposable
         catch (COMException comException)
         {
             throw new InvalidOperationException(
-                "Failed to retrieve active document info.", comException);
+                "无法读取 Photoshop 当前图片。请先在 Photoshop 中打开任务工作副本。", comException);
         }
     }
 
@@ -153,7 +153,7 @@ public sealed class PhotoshopService : IPhotoshopService, IDisposable
         }
         catch (COMException comException)
         {
-            throw new InvalidOperationException("Failed to retrieve open documents.", comException);
+            throw new InvalidOperationException("无法读取 Photoshop 已打开的图片，请关闭弹窗后重试。", comException);
         }
     }
 
@@ -167,7 +167,7 @@ public sealed class PhotoshopService : IPhotoshopService, IDisposable
         catch (COMException comException)
         {
             throw new InvalidOperationException(
-                "Failed to retrieve Photoshop version.", comException);
+                "无法读取 Photoshop 版本，请确认软件已正常启动且没有弹窗。", comException);
         }
     }
 

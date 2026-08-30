@@ -20,7 +20,7 @@ public sealed class IllustratorService : IIllustratorService, IDisposable
     {
         var classId = Type.GetTypeFromProgID(IllustratorProgId)?.GUID
             ?? throw new InvalidOperationException(
-                "Adobe Illustrator is not installed or its COM registration is missing.");
+                "没有找到 Illustrator，或自动控制接口尚未就绪。请先启动一次 Illustrator 后重试。");
         GetActiveObject(ref classId, IntPtr.Zero, out var instance);
         return instance;
     }
@@ -47,9 +47,9 @@ public sealed class IllustratorService : IIllustratorService, IDisposable
 
         var illustratorType = Type.GetTypeFromProgID(IllustratorProgId)
             ?? throw new InvalidOperationException(
-                "Adobe Illustrator is not installed or its COM registration is missing.");
+                "没有找到 Illustrator，或自动控制接口尚未就绪。请先启动一次 Illustrator 后重试。");
         _illustratorApplication = Activator.CreateInstance(illustratorType)
-            ?? throw new InvalidOperationException("Failed to create Illustrator COM instance.");
+            ?? throw new InvalidOperationException("Illustrator 启动失败，请确认软件已激活且当前没有许可弹窗。");
     }
 
     private dynamic GetApplication()
@@ -72,7 +72,7 @@ public sealed class IllustratorService : IIllustratorService, IDisposable
         catch (COMException exception)
         {
             throw new InvalidOperationException(
-                "Illustrator has no accessible active document.", exception);
+                "无法读取 Illustrator 当前文件。请先打开任务中的矢量文件。", exception);
         }
     }
 

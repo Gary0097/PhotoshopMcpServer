@@ -54,7 +54,7 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
                 工作副本 = record.WorkingCopy,
                 处理结果目录 = record.OutputDirectory,
                 目标像素 = $"{record.TargetWidthPixels} × {record.TargetHeightPixels}",
-                record.Warnings
+                注意事项 = record.Warnings
             }, new JsonSerializerOptions { WriteIndented = true });
         }
         catch (Exception exception)
@@ -201,7 +201,7 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
         string 任务目录,
         [Description("复核人员姓名。")]
         string 复核人,
-        [Description("通过填写 true，退回修改填写 false。")]
+        [Description("客户明确说“通过”时为通过；说“退回修改”时为不通过。客户不需要输入英文。")]
         bool 是否通过,
         [Description("复核意见，例如：四边接缝自然，可以生产。")]
         string 复核意见)
@@ -212,9 +212,9 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
             return JsonSerializer.Serialize(new
             {
                 成功 = true,
-                review.Status,
-                review.Reviewer,
-                review.Comment,
+                当前状态 = review.Status,
+                复核人 = review.Reviewer,
+                复核意见 = review.Comment,
                 已批准文件 = string.IsNullOrEmpty(review.ResultFile) ? "无" : review.ResultFile,
                 文件校验值 = string.IsNullOrEmpty(review.ResultSha256) ? "无" : review.ResultSha256
             }, new JsonSerializerOptions { WriteIndented = true });
@@ -299,7 +299,7 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
                 提示 = "AI 结果已保存到任务。请在 Photoshop 中检查，明确复核通过后才能导出生产版。",
                 结果文件 = result.ResultFile,
                 校验值 = result.ResultSha256,
-                result.Status
+                当前状态 = result.Status
             }, new JsonSerializerOptions { WriteIndented = true });
         }
         catch (Exception exception)
@@ -328,8 +328,8 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
             {
                 成功 = true,
                 报告文件 = report.ReportFile,
-                report.Stage,
-                report.Status,
+                报告阶段 = report.Stage,
+                材料状态 = report.Status,
                 是否可以签字 = report.ReadyForSignOff,
                 下一步 = report.ReadyForSignOff
                     ? "请双方查看报告中的人工验收项并签字。"
@@ -362,7 +362,7 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
                 成功 = true,
                 提示 = "已安全回到上一版，原来的文件都保留。请查看恢复结果并重新复核。",
                 恢复结果 = record.RestoredFile,
-                record.Status
+                当前状态 = record.Status
             }, new JsonSerializerOptions { WriteIndented = true });
         }
         catch (Exception exception)
@@ -376,7 +376,7 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
     }
 
     [McpServerTool(Name = "duanxing_get_chinese_prompts")]
-    [Description("返回端行员工日常只需使用的四步中文作图菜单。用户说“帮助”“怎么用”或不知道下一步时调用。")]
+    [Description("返回端行员工日常只需使用的四步中文作图菜单。用户说“帮助”“怎么用”或还没有任何任务时调用。")]
     public string 获取中文作图口令()
         => """
             端行作图只需要四步，全程说中文：
@@ -406,13 +406,13 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
             成功 = true,
             提示 = "已找到最近任务。不要修改原图，请继续处理工作副本。",
             任务目录 = taskDirectory,
-            task.TaskId,
+            任务编号 = task.TaskId,
             当前进度 = progress.Status,
             任务名称 = task.TaskName,
             成品规格 = $"宽 {task.WidthMillimeters} 毫米 × 高 {task.HeightMillimeters} 毫米，印刷精度 {task.Dpi}",
             拼接方式 = task.TilingMode,
             输出格式 = task.OutputFormat,
-            task.Reviewer,
+            复核人 = task.Reviewer,
             工作副本 = task.WorkingCopy,
             处理结果目录 = task.OutputDirectory,
             下一步 = progress.NextStep

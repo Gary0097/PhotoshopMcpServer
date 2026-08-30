@@ -30,6 +30,8 @@ public class DuanxingWorkflowToolsTests : IDisposable
         var root = document.RootElement;
         root.GetProperty("成功").GetBoolean().Should().BeTrue();
         root.GetProperty("目标像素").GetString().Should().Be("20000 × 10000");
+        root.TryGetProperty("Warnings", out _).Should().BeFalse();
+        root.TryGetProperty("注意事项", out _).Should().BeTrue();
         var taskDirectory = root.GetProperty("任务目录").GetString();
         taskDirectory.Should().Contain("端行作图输出");
         File.Exists(Path.Combine(taskDirectory, "task.json")).Should().BeTrue();
@@ -87,6 +89,10 @@ public class DuanxingWorkflowToolsTests : IDisposable
         root.GetProperty("任务名称").GetString().Should().Contain("木纹原图");
         root.GetProperty("当前进度").GetString().Should().Be("任务已建立，等待处理");
         root.GetProperty("下一步").GetString().Should().Contain("直接做检查版");
+        root.TryGetProperty("TaskId", out _).Should().BeFalse();
+        root.TryGetProperty("Reviewer", out _).Should().BeFalse();
+        root.GetProperty("任务编号").GetString().Should().NotBeNullOrWhiteSpace();
+        root.GetProperty("复核人").GetString().Should().Be("张三");
     }
 
     [Fact]
