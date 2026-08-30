@@ -1,5 +1,6 @@
 ﻿param(
-    [switch]$DryRun
+    [switch]$DryRun,
+    [switch]$SkipEnvironmentCheck
 )
 
 $ErrorActionPreference = 'Stop'
@@ -39,9 +40,14 @@ if ($DryRun) {
 }
 
 Write-Host '第 1/3 步：检查电脑环境'
-& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $environmentCheck
-if ($LASTEXITCODE -ne 0) {
-    throw '环境检查未通过，安装已经停止。'
+if ($SkipEnvironmentCheck) {
+    Write-Host '一键部署已经完成环境检查，自动跳过。' -ForegroundColor Green
+}
+else {
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $environmentCheck
+    if ($LASTEXITCODE -ne 0) {
+        throw '环境检查未通过，安装已经停止。'
+    }
 }
 
 Write-Host ''

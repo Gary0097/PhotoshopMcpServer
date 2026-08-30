@@ -57,7 +57,7 @@ if ($environmentExitCode -ne 0) {
 
 Write-Host ''
 Write-Host '第 2/3 步：安装或更新端行作图助手'
-& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $installScript
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $installScript -SkipEnvironmentCheck
 if ($LASTEXITCODE -ne 0) {
     throw '插件安装或更新没有完成。'
 }

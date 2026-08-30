@@ -21,12 +21,17 @@ if (-not (Test-Path -LiteralPath $serverPath -PathType Leaf)) {
     throw '没有找到端行作图服务，请先双击“安装端行作图助手.cmd”。'
 }
 
-& $serverPath --adobe-self-test $outputRoot
+$resultText = & $serverPath --adobe-self-test $outputRoot | Out-String
 if ($LASTEXITCODE -ne 0) {
     throw 'Photoshop 或 Illustrator 实际创建/保存测试文件失败。'
 }
+$result = $resultText | ConvertFrom-Json
 
 Write-Host ''
 Write-Host 'Adobe 现场自检通过。' -ForegroundColor Green
-Write-Host "自检文件保存在：$outputRoot"
+Write-Host "Photoshop 版本：$($result.PhotoshopVersion)"
+Write-Host "Illustrator 版本：$($result.IllustratorVersion)"
+Write-Host "Photoshop 测试图：$($result.PhotoshopTestFile)"
+Write-Host "Illustrator 测试线稿：$($result.IllustratorTestFile)"
+Write-Host "中文自检记录：$($result.OutputDirectory)\自检记录.json"
 Write-Host '下一步：打开 Codex，输入“检查端行作图环境”。' -ForegroundColor Yellow
