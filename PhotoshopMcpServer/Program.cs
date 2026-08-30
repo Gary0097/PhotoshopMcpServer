@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using PhotoshopMcpServer.Services;
+using PhotoshopMcpServer.Tools;
 using System.Text.Json;
 
 if (args.Length > 0 && args[0] == "--adobe-self-test")
@@ -79,9 +80,14 @@ builder.Services.AddSingleton<IPhotoshopService, PhotoshopService>();
 builder.Services.AddSingleton<IIllustratorService, IllustratorService>();
 builder.Services.AddSingleton<ITaskWorkspaceService, TaskWorkspaceService>();
 
-builder.Services
+var mcpBuilder = builder.Services
     .AddMcpServer()
-    .WithStdioServerTransport()
-    .WithToolsFromAssembly();
+    .WithStdioServerTransport();
+
+var includeDeveloperTools = string.Equals(
+    Environment.GetEnvironmentVariable("DUANXING_ALLOW_ARBITRARY_SCRIPTS"),
+    "true",
+    StringComparison.OrdinalIgnoreCase);
+mcpBuilder.WithTools(DuanxingToolCatalog.GetToolTypes(includeDeveloperTools));
 
 await builder.Build().RunAsync();

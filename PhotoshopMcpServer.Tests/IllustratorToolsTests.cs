@@ -16,7 +16,7 @@ public class IllustratorToolsTests
         _illustratorService.Setup(service => service.IsIllustratorRunning()).Returns(true);
         var tools = new IllustratorTools(_illustratorService.Object);
 
-        tools.IsIllustratorRunning().Should().Be("true");
+        tools.IsIllustratorRunning().Should().Be("是");
     }
 
     [Fact]

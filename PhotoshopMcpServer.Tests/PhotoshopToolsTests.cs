@@ -82,7 +82,7 @@ public class PhotoshopToolsTests
 
         var result = _tools.IsPhotoshopRunning();
 
-        result.Should().Be("true");
+        result.Should().Be("是");
     }
 
     [Fact]
@@ -92,7 +92,7 @@ public class PhotoshopToolsTests
 
         var result = _tools.IsPhotoshopRunning();
 
-        result.Should().Be("false");
+        result.Should().Be("否");
     }
 
     [Fact]

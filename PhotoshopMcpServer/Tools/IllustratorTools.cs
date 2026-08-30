@@ -10,7 +10,7 @@ public class IllustratorTools(IIllustratorService illustratorService)
     [McpServerTool(Name = "illustrator_is_running")]
     [Description("检查 Illustrator 是否已经启动并可连接。")]
     public string IsIllustratorRunning()
-        => illustratorService.IsIllustratorRunning().ToString().ToLowerInvariant();
+        => illustratorService.IsIllustratorRunning() ? "是" : "否";
 
     [McpServerTool(Name = "illustrator_launch")]
     [Description("启动 Illustrator，或连接到已经打开的 Illustrator。")]
