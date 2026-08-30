@@ -9,6 +9,9 @@ trap {
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $serverPath = Join-Path $repositoryRoot `
     'plugins\duanxing-creative-automation\server\win-x64\PhotoshopMcpServer.exe'
+if (-not [string]::IsNullOrWhiteSpace($env:DUANXING_TEST_SERVER_PATH)) {
+    $serverPath = [IO.Path]::GetFullPath($env:DUANXING_TEST_SERVER_PATH)
+}
 if (-not (Test-Path -LiteralPath $serverPath -PathType Leaf)) {
     throw '没有找到端行作图服务，请重新运行根目录的一键安装。'
 }
