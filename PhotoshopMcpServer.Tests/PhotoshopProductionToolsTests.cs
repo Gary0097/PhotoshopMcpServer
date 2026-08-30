@@ -63,7 +63,76 @@ public class PhotoshopProductionToolsTests
         tools.检查是否允许导出生产版("task").Should().Contain(expected);
     }
 
-    private static DuanxingTaskRecord CreateTask()
+    [Fact]
+    public void CreateHalfDropCheck_BuildsTwoColumnOffsetLayout()
+    {
+        _taskWorkspaceService.Setup(service => service.LoadTask("task")).Returns(CreateTask());
+        _photoshopService.Setup(service => service.ExecuteJavaScriptWithResult(It.IsAny<string>()))
+            .Returns(new PhotoshopScriptResult(true, "ok", string.Empty));
+        var tools = new PhotoshopProductionTools(
+            _photoshopService.Object,
+            _taskWorkspaceService.Object);
+
+        tools.生成二分之一错位检查图("task");
+
+        _photoshopService.Verify(service => service.ExecuteJavaScriptWithResult(
+            It.Is<string>(script =>
+                script.Contains("width*2,height*2") &&
+                script.Contains("pasteAt(width,-height/2)") &&
+                script.Contains("pasteAt(width,height/2)"))));
+    }
+
+    [Fact]
+    public void ExportProductionFile_WhenNotApproved_DoesNotCallPhotoshop()
+    {
+        _taskWorkspaceService.Setup(service => service.LoadTask("task")).Returns(CreateTask());
+        _taskWorkspaceService.Setup(service => service.IsApproved("task")).Returns(false);
+        var tools = new PhotoshopProductionTools(
+            _photoshopService.Object,
+            _taskWorkspaceService.Object);
+
+        tools.导出已批准生产版("task", @"D:\输出\结果.psd", "TIFF")
+            .Should().Contain("禁止导出生产版");
+        _photoshopService.Verify(
+            service => service.ExecuteJavaScriptWithResult(It.IsAny<string>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public void ExportProductionFile_WhenApproved_UsesFixedProductionDirectory()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "duanxing-export", Guid.NewGuid().ToString("N"));
+        try
+        {
+            var taskDirectory = Path.Combine(root, "task");
+            var outputDirectory = Path.Combine(taskDirectory, "02_处理结果");
+            Directory.CreateDirectory(outputDirectory);
+            var source = Path.Combine(outputDirectory, "已复核.psd");
+            File.WriteAllText(source, "sample");
+            _taskWorkspaceService.Setup(service => service.LoadTask(taskDirectory))
+                .Returns(CreateTask(outputDirectory));
+            _taskWorkspaceService.Setup(service => service.IsApproved(taskDirectory)).Returns(true);
+            _photoshopService.Setup(service => service.ExecuteJavaScriptWithResult(It.IsAny<string>()))
+                .Returns(new PhotoshopScriptResult(true, "ok", string.Empty));
+            var tools = new PhotoshopProductionTools(
+                _photoshopService.Object,
+                _taskWorkspaceService.Object);
+
+            var result = tools.导出已批准生产版(taskDirectory, source, "TIFF");
+
+            result.Should().Contain("04_生产版");
+            _photoshopService.Verify(service => service.ExecuteJavaScriptWithResult(
+                It.Is<string>(script =>
+                    script.Contains("TiffSaveOptions") && script.Contains("_生产版.tif"))));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+                Directory.Delete(root, recursive: true);
+        }
+    }
+
+    private static DuanxingTaskRecord CreateTask(string outputDirectory = @"D:\输出\任务\02_处理结果")
         => new(
             "DX-test",
             "待处理",
@@ -71,7 +140,7 @@ public class PhotoshopProductionToolsTests
             @"D:\样板\原图.tif",
             "hash",
             @"D:\输出\任务\01_工作副本\原图.tif",
-            @"D:\输出\任务\02_处理结果",
+            outputDirectory,
             "木纹无缝",
             200,
             200,

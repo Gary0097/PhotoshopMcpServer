@@ -100,6 +100,47 @@ public class PhotoshopProductionTools(
         }
     }
 
+    [McpServerTool(Name = "duanxing_create_half_drop_check")]
+    [Description(
+        "为端行任务生成 1/2 错位拼接检查图：建立 2×2 画布，右列上下错开半个图案高度，" +
+        "用于检查二分之一错位后的接缝和连续性。不会覆盖原图。")]
+    public string 生成二分之一错位检查图(
+        [Description("包含 task.json 的端行任务目录。")]
+        string 任务目录)
+    {
+        try
+        {
+            var task = taskWorkspaceService.LoadTask(任务目录);
+            var outputPath = Path.Combine(
+                task.OutputDirectory,
+                $"{SanitizeFileName(task.TaskName)}_二分之一错位检查.psd");
+            var script = "(function(){" +
+                $"var source=app.open(new File(\"{EscapePath(task.WorkingCopy)}\"));" +
+                "if(source.layers.length>1){source.flatten();}" +
+                "var width=source.width.as('px'),height=source.height.as('px');" +
+                "source.selection.selectAll();source.selection.copy(true);" +
+                "var result=app.documents.add(width*2,height*2,source.resolution," +
+                "'1-2错位检查',NewDocumentMode.RGB,DocumentFill.TRANSPARENT);" +
+                "function pasteAt(x,y){app.activeDocument=result;var layer=result.paste();" +
+                "layer.translate(x+width/2-width,y+height/2-height);}" +
+                "pasteAt(0,0);pasteAt(0,height);" +
+                "pasteAt(width,-height/2);pasteAt(width,height/2);pasteAt(width,height*1.5);" +
+                "var options=new PhotoshopSaveOptions();options.layers=true;" +
+                $"result.saveAs(new File(\"{EscapePath(outputPath)}\"),options,true,Extension.LOWERCASE);" +
+                $"return \"{EscapeJavaScript(outputPath)}\";" +
+                "})();";
+            var result = photoshopService.ExecuteJavaScriptWithResult(script);
+            if (!result.Success)
+                return $"生成 1/2 错位检查图失败：{result.ErrorMessage}";
+            return $"1/2 错位检查图已生成：{outputPath}\n" +
+                "请检查中间竖向接缝，以及右列上下错位后的横向连续性。";
+        }
+        catch (Exception exception)
+        {
+            return $"无法生成 1/2 错位检查图：{exception.Message}";
+        }
+    }
+
     [McpServerTool(Name = "duanxing_check_export_approval")]
     [Description("检查端行任务是否已通过人工复核。未通过时禁止称为生产版或执行最终交付。")]
     public string 检查是否允许导出生产版(
@@ -116,6 +157,109 @@ public class PhotoshopProductionTools(
         {
             return $"无法检查复核状态：{exception.Message}";
         }
+    }
+
+    [McpServerTool(Name = "duanxing_export_approved_production_file")]
+    [Description(
+        "把已经通过人工复核的 Photoshop 结果导出为生产版。" +
+        "源文件必须位于当前任务的处理结果目录，生产版固定保存到该任务的“04_生产版”目录。")]
+    public string 导出已批准生产版(
+        [Description("包含 task.json 的端行任务目录。")]
+        string 任务目录,
+        [Description("已经复核的结果文件完整路径，必须位于任务的“02_处理结果”目录。")]
+        string 已复核结果文件,
+        [Description("生产输出格式：PSD、PSB、TIFF、PNG 或 JPEG。")]
+        string 输出格式,
+        [Description("JPEG 质量 1 到 100；其他格式可填写 100。")]
+        int JPEG质量 = 100)
+    {
+        try
+        {
+            var task = taskWorkspaceService.LoadTask(任务目录);
+            if (!taskWorkspaceService.IsApproved(任务目录))
+                return "禁止导出生产版：请先由指定人员复核，并保存“通过”结论。";
+
+            var sourcePath = Path.GetFullPath(已复核结果文件);
+            if (!File.Exists(sourcePath))
+                return "无法导出：找不到已复核结果文件。";
+            if (!IsPathInside(sourcePath, task.OutputDirectory))
+                return "禁止导出：源文件必须位于当前任务的“02_处理结果”目录。";
+
+            var normalizedFormat = (输出格式 ?? string.Empty).Trim().ToUpperInvariant();
+            var extension = normalizedFormat switch
+            {
+                "PSD" => ".psd",
+                "PSB" => ".psb",
+                "TIFF" or "TIF" => ".tif",
+                "PNG" => ".png",
+                "JPEG" or "JPG" => ".jpg",
+                _ => throw new ArgumentException("生产输出格式只支持 PSD、PSB、TIFF、PNG 或 JPEG。")
+            };
+            if (JPEG质量 is < 1 or > 100)
+                throw new ArgumentOutOfRangeException(nameof(JPEG质量), "JPEG 质量必须在 1 到 100 之间。");
+
+            var productionDirectory = Path.Combine(Path.GetFullPath(任务目录), "04_生产版");
+            Directory.CreateDirectory(productionDirectory);
+            var outputPath = Path.Combine(
+                productionDirectory,
+                $"{Path.GetFileNameWithoutExtension(sourcePath)}_生产版{extension}");
+            if (File.Exists(outputPath))
+                return $"禁止覆盖已有生产版：{outputPath}\n请先确认旧文件或创建新任务版本。";
+
+            var script = BuildProductionExportScript(
+                sourcePath,
+                outputPath,
+                normalizedFormat,
+                JPEG质量);
+            var result = photoshopService.ExecuteJavaScriptWithResult(script);
+            if (!result.Success)
+                return $"生产版导出失败：{result.ErrorMessage}";
+            return $"生产版已导出：{outputPath}\n来源：{sourcePath}\n复核状态：已通过。";
+        }
+        catch (Exception exception)
+        {
+            return $"无法导出生产版：{exception.Message}";
+        }
+    }
+
+    private static string BuildProductionExportScript(
+        string sourcePath,
+        string outputPath,
+        string outputFormat,
+        int jpegQuality)
+    {
+        var prefix = "(function(){" +
+            $"var doc=app.open(new File(\"{EscapePath(sourcePath)}\"));" +
+            $"var output=new File(\"{EscapePath(outputPath)}\");";
+        var save = outputFormat switch
+        {
+            "PSD" or "PSB" =>
+                "var options=new PhotoshopSaveOptions();options.layers=true;" +
+                "doc.saveAs(output,options,true,Extension.LOWERCASE);",
+            "TIFF" or "TIF" =>
+                "var options=new TiffSaveOptions();options.layers=true;" +
+                "options.imageCompression=TIFFEncoding.TIFFLZW;" +
+                "doc.saveAs(output,options,true,Extension.LOWERCASE);",
+            "PNG" =>
+                "var options=new ExportOptionsSaveForWeb();options.format=SaveDocumentType.PNG;" +
+                "options.PNG8=false;options.transparency=true;" +
+                "doc.exportDocument(output,ExportType.SAVEFORWEB,options);",
+            "JPEG" or "JPG" =>
+                "var options=new ExportOptionsSaveForWeb();options.format=SaveDocumentType.JPEG;" +
+                $"options.quality={jpegQuality};" +
+                "doc.exportDocument(output,ExportType.SAVEFORWEB,options);",
+            _ => throw new ArgumentOutOfRangeException(nameof(outputFormat))
+        };
+        return prefix + save + $"return \"{EscapeJavaScript(outputPath)}\";" + "})();";
+    }
+
+    private static bool IsPathInside(string candidatePath, string allowedDirectory)
+    {
+        var candidate = Path.GetFullPath(candidatePath);
+        var allowed = Path.GetFullPath(allowedDirectory)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) +
+            Path.DirectorySeparatorChar;
+        return candidate.StartsWith(allowed, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string EscapePath(string path)
