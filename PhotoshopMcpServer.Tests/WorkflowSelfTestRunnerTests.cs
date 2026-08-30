@@ -49,6 +49,7 @@ public class WorkflowSelfTestRunnerTests : IDisposable
         result.Messages.Should().Contain(message => message.Contains("预览和中文复核单"));
         result.Messages.Should().Contain(message => message.Contains("通过并导出"));
         result.Messages.Should().Contain(message => message.Contains("中文规格模板"));
+        result.Messages.Should().Contain(message => message.Contains("批量处理两张图"));
         taskService.IsResultApproved(result.TaskDirectory, result.ReviewFile).Should().BeTrue();
     }
 

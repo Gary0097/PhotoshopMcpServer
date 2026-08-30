@@ -169,6 +169,149 @@ public class DuanxingQuickActionTools(
         }
     }
 
+    [McpServerTool(Name = "duanxing_batch_start_from_preset")]
+    [Description(
+        "把客户一次拖入的 2 到 20 张原图按同一个中文规格模板逐张处理。" +
+        "每张图都独立保护原图、建立任务、生成检查版、预览和复核单；部分失败不会影响其他成功项。")]
+    public string 按规格模板批量做图(
+        [Description("客户本次拖入的全部原图完整位置，至少 2 张、最多 20 张。")]
+        string[] 原图路径列表,
+        [Description("客户点名的中文规格模板，例如：木纹。")]
+        string 模板名称,
+        [Description("本批复核人有变化时填写；留空则使用模板中的复核人。")]
+        string 复核人 = "")
+    {
+        try
+        {
+            var sourcePaths = ValidateBatchItems(原图路径列表, "原图");
+            var preset = taskWorkspaceService.GetProductionPreset(模板名称);
+            var effectiveReviewer = string.IsNullOrWhiteSpace(复核人)
+                ? preset.Reviewer
+                : 复核人.Trim();
+            var items = new List<object>();
+            var succeededCount = 0;
+            for (var index = 0; index < sourcePaths.Count; index++)
+            {
+                var sourcePath = sourcePaths[index];
+                var result = 开始并生成检查版(
+                    sourcePath,
+                    preset.WidthMillimeters,
+                    preset.HeightMillimeters,
+                    preset.Dpi,
+                    effectiveReviewer,
+                    preset.TilingMode,
+                    preset.OutputFormat);
+                using var document = JsonDocument.Parse(result);
+                var root = document.RootElement;
+                var succeeded = root.GetProperty("成功").GetBoolean();
+                var taskDirectory = "无";
+                if (succeeded)
+                {
+                    succeededCount++;
+                    var task = taskWorkspaceService.FindLatestTaskForSource(sourcePath);
+                    taskDirectory = GetTaskDirectory(task);
+                }
+                items.Add(new
+                {
+                    序号 = index + 1,
+                    原图 = Path.GetFileName(sourcePath),
+                    成功 = succeeded,
+                    任务目录 = taskDirectory,
+                    已完成 = root.GetProperty("已完成").GetString(),
+                    处理详情 = root.GetProperty("处理详情").GetString(),
+                    中文复核单 = root.GetProperty("中文复核单").Clone(),
+                    下一步 = root.GetProperty("下一步").GetString()
+                });
+            }
+            var failedCount = sourcePaths.Count - succeededCount;
+            return JsonSerializer.Serialize(new
+            {
+                成功 = failedCount == 0,
+                模板 = preset.Name,
+                图片总数 = sourcePaths.Count,
+                成功数量 = succeededCount,
+                失败数量 = failedCount,
+                各图片结果 = items,
+                下一步 = succeededCount == 0
+                    ? "本批没有成功项目，请按各图片的中文提示处理后重试。"
+                    : "请逐张查看预览；全部确认无误后说“这批都通过并导出”。"
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception exception)
+        {
+            return SerializeResult(false, "这批图片没有开始处理", exception.Message);
+        }
+    }
+
+    [McpServerTool(Name = "duanxing_batch_approve_and_export")]
+    [Description(
+        "客户逐张查看批量预览后明确说“这批都通过并导出”时调用。" +
+        "使用批量作图返回的任务目录逐项绑定批准校验值并导出；禁止询问客户目录，禁止在未明确全部通过时调用。")]
+    public string 批量批准并导出(
+        [Description("由上一条批量作图结果返回的成功任务目录；不要让客户手工填写。")]
+        string[] 任务目录列表)
+    {
+        try
+        {
+            var taskDirectories = ValidateBatchItems(任务目录列表, "任务");
+            var items = new List<object>();
+            var succeededCount = 0;
+            var productionTools = new PhotoshopProductionTools(
+                photoshopService,
+                taskWorkspaceService);
+            for (var index = 0; index < taskDirectories.Count; index++)
+            {
+                var taskDirectory = taskDirectories[index];
+                try
+                {
+                    var task = taskWorkspaceService.LoadTask(taskDirectory);
+                    taskWorkspaceService.SaveReview(
+                        taskDirectory,
+                        task.Reviewer,
+                        true,
+                        "客户确认本批全部通过并要求导出");
+                    var exportResult = productionTools.一键导出生产版(taskDirectory);
+                    var succeeded = !OperationFailed(exportResult);
+                    if (succeeded)
+                        succeededCount++;
+                    items.Add(new
+                    {
+                        序号 = index + 1,
+                        原图 = Path.GetFileName(task.SourceFile),
+                        成功 = succeeded,
+                        结果 = exportResult
+                    });
+                }
+                catch (Exception exception)
+                {
+                    items.Add(new
+                    {
+                        序号 = index + 1,
+                        原图 = $"第 {index + 1} 张",
+                        成功 = false,
+                        结果 = exception.Message
+                    });
+                }
+            }
+            var failedCount = taskDirectories.Count - succeededCount;
+            return JsonSerializer.Serialize(new
+            {
+                成功 = failedCount == 0,
+                图片总数 = taskDirectories.Count,
+                已导出数量 = succeededCount,
+                未导出数量 = failedCount,
+                各图片结果 = items,
+                下一步 = failedCount == 0
+                    ? "本批已经全部导出。需要交付材料时说“生成中文交付报告”。"
+                    : "请只处理列表中的未导出项目；已经导出的文件不要重复操作。"
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception exception)
+        {
+            return SerializeResult(false, "这批图片没有完成通过和导出", exception.Message);
+        }
+    }
+
     [McpServerTool(Name = "duanxing_start_and_run")]
     [Description(
         "一键开始端行作图：保护客户原图、建立中文任务、生成工艺检查版和复核预览。" +
@@ -490,9 +633,32 @@ public class DuanxingQuickActionTools(
     }
 
     private static bool OperationFailed(string result)
-        => result.Contains("失败", StringComparison.Ordinal) ||
-            result.StartsWith("无法", StringComparison.Ordinal) ||
-            result.StartsWith("还没有", StringComparison.Ordinal);
+    {
+        var firstLine = result.Split('\n', 2)[0];
+        var statusTitle = firstLine.Split('：', 2)[0];
+        return statusTitle.EndsWith("失败", StringComparison.Ordinal) ||
+            statusTitle.StartsWith("无法", StringComparison.Ordinal) ||
+            statusTitle.StartsWith("还没有", StringComparison.Ordinal) ||
+            statusTitle.StartsWith("禁止", StringComparison.Ordinal);
+    }
+
+    private static IReadOnlyList<string> ValidateBatchItems(
+        string[] items,
+        string itemType)
+    {
+        if (items == null || items.Length < 2)
+            throw new ArgumentException($"批量{itemType}至少需要 2 项。只有 1 项时请使用单张入口。");
+        if (items.Length > 20)
+            throw new ArgumentException($"一次最多处理 20 项批量{itemType}，请分批操作。");
+        var normalizedItems = items
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Select(Path.GetFullPath)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (normalizedItems.Count != items.Length)
+            throw new ArgumentException($"批量{itemType}中有空项或重复项，请重新选择。");
+        return normalizedItems;
+    }
 
     private string GetRecentTaskDirectory()
         => GetTaskDirectory(taskWorkspaceService.FindMostRecentTask());

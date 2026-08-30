@@ -148,6 +148,141 @@ public class DuanxingQuickActionToolsTests : IDisposable
     }
 
     [Fact]
+    public void BatchFromPreset_CreatesIndependentProtectedTasksForEverySource()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var templateSource = Path.Combine(_testRoot, "模板.png");
+        var firstSource = Path.Combine(_testRoot, "第一张.png");
+        var secondSource = Path.Combine(_testRoot, "第二张.png");
+        File.WriteAllText(templateSource, "template");
+        File.WriteAllText(firstSource, "first-original");
+        File.WriteAllText(secondSource, "second-original");
+        var service = CreateService();
+        service.PrepareTask(new DuanxingTaskRequest(
+            templateSource,
+            Path.Combine(_testRoot, "模板输出"),
+            "木纹模板",
+            300,
+            200,
+            2540,
+            "平铺",
+            "TIFF",
+            "张三"));
+        service.SaveMostRecentTaskAsPreset("木纹");
+        var photoshop = new Mock<IPhotoshopService>();
+        photoshop
+            .Setup(item => item.ExecuteJavaScriptWithResult(It.IsAny<string>()))
+            .Returns(new PhotoshopScriptResult(true, "ok", string.Empty));
+        var tools = new DuanxingQuickActionTools(service, photoshop.Object);
+
+        var json = tools.按规格模板批量做图(
+            [firstSource, secondSource],
+            "木纹");
+
+        using var document = JsonDocument.Parse(json);
+        document.RootElement.GetProperty("图片总数").GetInt32().Should().Be(2);
+        document.RootElement.GetProperty("成功数量").GetInt32().Should().Be(2);
+        document.RootElement.GetProperty("各图片结果").GetArrayLength().Should().Be(2);
+        service.FindLatestTaskForSource(firstSource).Dpi.Should().Be(2540);
+        service.FindLatestTaskForSource(secondSource).Dpi.Should().Be(2540);
+        File.ReadAllText(firstSource).Should().Be("first-original");
+        File.ReadAllText(secondSource).Should().Be("second-original");
+        photoshop.Verify(
+            item => item.ExecuteJavaScriptWithResult(It.IsAny<string>()),
+            Times.Exactly(2));
+    }
+
+    [Fact]
+    public void BatchApproveAndExport_ApprovesEachExactTaskResult()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var service = CreateService();
+        var taskDirectories = new List<string>();
+        var resultFiles = new List<string>();
+        for (var index = 1; index <= 2; index++)
+        {
+            var source = Path.Combine(_testRoot, $"批量{index}.png");
+            File.WriteAllText(source, $"original-{index}");
+            var task = service.PrepareTask(new DuanxingTaskRequest(
+                source,
+                Path.Combine(_testRoot, $"输出{index}"),
+                $"批量{index}",
+                100,
+                100,
+                1270,
+                "平铺",
+                "TIFF",
+                "张三"));
+            taskDirectories.Add(Directory.GetParent(task.OutputDirectory)?.FullName);
+            var resultFile = Path.Combine(task.OutputDirectory, $"结果{index}.psd");
+            File.WriteAllText(resultFile, $"result-{index}");
+            resultFiles.Add(resultFile);
+        }
+        var photoshop = new Mock<IPhotoshopService>();
+        photoshop
+            .Setup(item => item.ExecuteJavaScriptWithResult(It.IsAny<string>()))
+            .Returns(new PhotoshopScriptResult(true, "ok", string.Empty));
+        var tools = new DuanxingQuickActionTools(service, photoshop.Object);
+
+        var json = tools.批量批准并导出(taskDirectories.ToArray());
+
+        using var document = JsonDocument.Parse(json);
+        document.RootElement.GetProperty("成功").GetBoolean().Should().BeTrue();
+        document.RootElement.GetProperty("已导出数量").GetInt32().Should().Be(2);
+        for (var index = 0; index < 2; index++)
+            service.IsResultApproved(taskDirectories[index], resultFiles[index]).Should().BeTrue();
+        photoshop.Verify(
+            item => item.ExecuteJavaScriptWithResult(It.IsAny<string>()),
+            Times.Exactly(2));
+    }
+
+    [Fact]
+    public void BatchApproveAndExport_PartialFailureKeepsSuccessfulItemAndReportsCounts()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var service = CreateService();
+        var taskDirectories = new List<string>();
+        string successfulResult = string.Empty;
+        for (var index = 1; index <= 2; index++)
+        {
+            var source = Path.Combine(_testRoot, $"部分失败{index}.png");
+            File.WriteAllText(source, $"original-{index}");
+            var task = service.PrepareTask(new DuanxingTaskRequest(
+                source,
+                Path.Combine(_testRoot, $"部分输出{index}"),
+                $"部分失败{index}",
+                100,
+                100,
+                1270,
+                "平铺",
+                "TIFF",
+                "张三"));
+            taskDirectories.Add(Directory.GetParent(task.OutputDirectory)?.FullName);
+            if (index == 1)
+            {
+                successfulResult = Path.Combine(task.OutputDirectory, "结果.psd");
+                File.WriteAllText(successfulResult, "result");
+            }
+        }
+        var photoshop = new Mock<IPhotoshopService>();
+        photoshop
+            .Setup(item => item.ExecuteJavaScriptWithResult(It.IsAny<string>()))
+            .Returns(new PhotoshopScriptResult(true, "ok", string.Empty));
+        var tools = new DuanxingQuickActionTools(service, photoshop.Object);
+
+        var json = tools.批量批准并导出(taskDirectories.ToArray());
+
+        using var document = JsonDocument.Parse(json);
+        document.RootElement.GetProperty("成功").GetBoolean().Should().BeFalse();
+        document.RootElement.GetProperty("已导出数量").GetInt32().Should().Be(1, json);
+        document.RootElement.GetProperty("未导出数量").GetInt32().Should().Be(1);
+        service.IsResultApproved(taskDirectories[0], successfulResult).Should().BeTrue();
+        photoshop.Verify(
+            item => item.ExecuteJavaScriptWithResult(It.IsAny<string>()),
+            Times.Once);
+    }
+
+    [Fact]
     public void StartAndRun_CreatesProtectedTaskAndRunsCheckInOneCall()
     {
         Directory.CreateDirectory(_testRoot);

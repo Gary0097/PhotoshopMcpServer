@@ -81,6 +81,34 @@ public sealed class WorkflowSelfTestRunner(
             throw new InvalidOperationException(
                 $"通过并导出后没有生成 TIFF 生产版：{approvalAndExportMessage}");
 
+        var batchSourceDirectory = Path.Combine(
+            Path.GetFullPath(outputRoot),
+            $"批量自检原图_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(batchSourceDirectory);
+        var firstBatchSource = Path.Combine(batchSourceDirectory, "批量第一张.png");
+        var secondBatchSource = Path.Combine(batchSourceDirectory, "批量第二张.png");
+        File.Copy(sourcePath, firstBatchSource, overwrite: false);
+        File.Copy(sourcePath, secondBatchSource, overwrite: false);
+        var batchMessage = quickTools.按规格模板批量做图(
+            [firstBatchSource, secondBatchSource],
+            "现场自检规格");
+        using var batchDocument = JsonDocument.Parse(batchMessage);
+        var batchRoot = batchDocument.RootElement;
+        if (!batchRoot.GetProperty("成功").GetBoolean() ||
+            batchRoot.GetProperty("成功数量").GetInt32() != 2)
+            throw new InvalidOperationException($"批量作图快捷入口失败：{batchMessage}");
+        var batchTaskDirectories = batchRoot
+            .GetProperty("各图片结果")
+            .EnumerateArray()
+            .Select(item => item.GetProperty("任务目录").GetString())
+            .ToArray();
+        var batchExportMessage = quickTools.批量批准并导出(batchTaskDirectories);
+        using var batchExportDocument = JsonDocument.Parse(batchExportMessage);
+        if (!batchExportDocument.RootElement.GetProperty("成功").GetBoolean() ||
+            batchExportDocument.RootElement.GetProperty("已导出数量").GetInt32() != 2)
+            throw new InvalidOperationException(
+                $"批量通过并导出快捷入口失败：{batchExportMessage}");
+
         var sourceUnchanged = CalculateSha256(sourcePath) == sourceHashBefore;
         if (!sourceUnchanged)
             throw new InvalidOperationException("完整流程自检发现原图发生变化，已经停止。");
@@ -92,6 +120,7 @@ public sealed class WorkflowSelfTestRunner(
             "已建立中文任务目录并创建工作副本。",
             "已保存并重新读取中文规格模板，参数保持一致。",
             "已通过一句“通过并导出”绑定人工复核记录并生成生产版。",
+            "已按中文规格模板批量处理两张图，并在明确批准后逐张导出。",
             "已同时生成可在 Codex 中查看的轻量预览和中文复核单。",
             "已导出 TIFF 生产版。",
             "已生成材料齐全的中文 POC 交付报告。",
