@@ -85,7 +85,8 @@ public class DuanxingWorkflowToolsTests : IDisposable
         var root = document.RootElement;
         root.GetProperty("成功").GetBoolean().Should().BeTrue();
         root.GetProperty("任务名称").GetString().Should().Contain("木纹原图");
-        root.GetProperty("下一步").GetString().Should().Contain("直接继续");
+        root.GetProperty("当前进度").GetString().Should().Be("任务已建立，等待处理");
+        root.GetProperty("下一步").GetString().Should().Contain("直接做检查版");
     }
 
     [Fact]

@@ -86,3 +86,12 @@ public record DuanxingRollbackRecord(
     string RestoredFile,
     string Status
 );
+
+public record DuanxingTaskProgress(
+    string TaskId,
+    string Status,
+    string NextStep,
+    int ResultFileCount,
+    int ProductionFileCount,
+    bool OriginalUnchanged
+);

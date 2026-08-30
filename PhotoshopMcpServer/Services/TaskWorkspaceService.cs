@@ -305,7 +305,10 @@ public sealed partial class TaskWorkspaceService : ITaskWorkspaceService
         if (aiRecords.Length > 0)
             latestAiRecord = JsonSerializer.Deserialize<DuanxingAiResultRecord>(File.ReadAllText(aiRecords[0]));
         var latestReview = LoadLatestReview(fullTaskDirectory);
-        var approved = latestReview != null && latestReview.TaskId == task.TaskId && latestReview.Approved;
+        var approved = latestReview != null &&
+            latestReview.TaskId == task.TaskId &&
+            latestReview.Approved &&
+            IsReviewResultValid(task, latestReview);
         var checklist = new List<string>
         {
             $"尺寸应为 {task.WidthMillimeters} × {task.HeightMillimeters} mm，{task.Dpi} DPI",
@@ -319,6 +322,13 @@ public sealed partial class TaskWorkspaceService : ITaskWorkspaceService
         else
             checklist.Add("检查画面边缘和成品裁切范围");
 
+        var reviewStatus = latestReview == null
+            ? "尚未复核"
+            : approved
+                ? latestReview.Status
+                : latestReview.Approved
+                    ? "原批准已失效，需要重新复核"
+                    : latestReview.Status;
         return new DuanxingReviewSummary(
             task.TaskId,
             fullTaskDirectory,
@@ -329,8 +339,62 @@ public sealed partial class TaskWorkspaceService : ITaskWorkspaceService
             File.Exists(task.SourceFile) && CalculateSha256(task.SourceFile) == task.SourceSha256,
             File.Exists(task.WorkingCopy),
             approved,
-            latestReview?.Status ?? "尚未复核",
+            reviewStatus,
             checklist);
+    }
+
+    public DuanxingTaskProgress BuildTaskProgress(string taskDirectory)
+    {
+        var fullTaskDirectory = Path.GetFullPath(taskDirectory);
+        var task = LoadTask(fullTaskDirectory);
+        var summary = BuildReviewSummary(fullTaskDirectory);
+        var productionDirectory = Path.Combine(fullTaskDirectory, "04_生产版");
+        var productionFileCount = Directory.Exists(productionDirectory)
+            ? Directory.GetFiles(productionDirectory).Length
+            : 0;
+
+        string status;
+        string nextStep;
+        if (!summary.OriginalUnchanged)
+        {
+            status = "已停止：原图异常";
+            nextStep = "请停止操作并联系实施人员检查原图。";
+        }
+        else if (productionFileCount > 0)
+        {
+            status = "已导出生产版";
+            nextStep = "需要交付材料时说“生成中文交付报告”。";
+        }
+        else if (summary.Approved)
+        {
+            status = "已复核通过，等待导出";
+            nextStep = "说“直接导出生产版”。";
+        }
+        else if (summary.ResultFileCount > 0 && summary.ReviewStatus.StartsWith("已退回"))
+        {
+            status = "已退回，等待修改";
+            nextStep = "说明要修改的位置和要求，或说“回到上一版”。";
+        }
+        else if (summary.ResultFileCount > 0)
+        {
+            status = summary.ReviewStatus.StartsWith("原批准已失效")
+                ? "结果有变化，需要重新复核"
+                : "已有处理结果，等待复核";
+            nextStep = "说“给我看结果”，然后回答“通过”或“退回修改”。";
+        }
+        else
+        {
+            status = "任务已建立，等待处理";
+            nextStep = "说“直接做检查版”，或说明要做的处理。";
+        }
+
+        return new DuanxingTaskProgress(
+            task.TaskId,
+            status,
+            nextStep,
+            summary.ResultFileCount,
+            productionFileCount,
+            summary.OriginalUnchanged);
     }
 
     public DuanxingDeliveryReport GenerateDeliveryReport(string taskDirectory, string stage)

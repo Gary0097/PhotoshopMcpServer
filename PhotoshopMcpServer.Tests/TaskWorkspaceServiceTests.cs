@@ -414,6 +414,71 @@ public class TaskWorkspaceServiceTests : IDisposable
             .WithMessage("*没有上一版可以恢复*");
     }
 
+    [Fact]
+    public void BuildTaskProgress_ReturnsRealStageAndOneNextStep()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var source = Path.Combine(_testRoot, "原图.png");
+        File.WriteAllText(source, "original");
+        var service = CreateService();
+        var task = service.PrepareTask(new DuanxingTaskRequest(
+            source, Path.Combine(_testRoot, "输出"), "进度测试", 100, 100, 1270,
+            "平铺", "TIFF", "张三"));
+        var taskDirectory = Directory.GetParent(task.OutputDirectory)?.FullName
+            ?? throw new InvalidOperationException("Task directory was not created.");
+
+        var created = service.BuildTaskProgress(taskDirectory);
+        created.Status.Should().Be("任务已建立，等待处理");
+        created.NextStep.Should().Contain("直接做检查版");
+
+        var resultFile = Path.Combine(task.OutputDirectory, "检查版.psd");
+        File.WriteAllText(resultFile, "result");
+        var awaitingReview = service.BuildTaskProgress(taskDirectory);
+        awaitingReview.Status.Should().Be("已有处理结果，等待复核");
+        awaitingReview.NextStep.Should().Contain("给我看结果");
+
+        service.SaveReview(taskDirectory, "张三", false, "接缝明显");
+        var rejected = service.BuildTaskProgress(taskDirectory);
+        rejected.Status.Should().Be("已退回，等待修改");
+
+        service.SaveReview(taskDirectory, "张三", true, "通过");
+        var approved = service.BuildTaskProgress(taskDirectory);
+        approved.Status.Should().Be("已复核通过，等待导出");
+        approved.NextStep.Should().Contain("直接导出生产版");
+
+        var productionDirectory = Path.Combine(taskDirectory, "04_生产版");
+        Directory.CreateDirectory(productionDirectory);
+        File.WriteAllText(Path.Combine(productionDirectory, "生产版.tif"), "production");
+        var exported = service.BuildTaskProgress(taskDirectory);
+        exported.Status.Should().Be("已导出生产版");
+        exported.ProductionFileCount.Should().Be(1);
+    }
+
+    [Fact]
+    public void BuildTaskProgress_WhenApprovedFileChanges_ShowsApprovalExpired()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var source = Path.Combine(_testRoot, "原图.png");
+        File.WriteAllText(source, "original");
+        var service = CreateService();
+        var task = service.PrepareTask(new DuanxingTaskRequest(
+            source, Path.Combine(_testRoot, "输出"), "审批失效", 100, 100, 1270,
+            "平铺", "TIFF", "张三"));
+        var taskDirectory = Directory.GetParent(task.OutputDirectory)?.FullName
+            ?? throw new InvalidOperationException("Task directory was not created.");
+        var resultFile = Path.Combine(task.OutputDirectory, "检查版.psd");
+        File.WriteAllText(resultFile, "approved");
+        service.SaveReview(taskDirectory, "张三", true, "通过");
+        File.WriteAllText(resultFile, "changed");
+
+        var progress = service.BuildTaskProgress(taskDirectory);
+        var review = service.BuildReviewSummary(taskDirectory);
+
+        progress.Status.Should().Be("结果有变化，需要重新复核");
+        progress.NextStep.Should().Contain("给我看结果");
+        review.ReviewStatus.Should().Be("原批准已失效，需要重新复核");
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_testRoot))

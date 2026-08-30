@@ -161,23 +161,7 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
         try
         {
             var task = taskWorkspaceService.FindLatestTaskForSource(原图路径);
-            var taskDirectory = Directory.GetParent(task.OutputDirectory)?.FullName;
-            return JsonSerializer.Serialize(new
-            {
-                成功 = true,
-                提示 = "已找到最近任务。不要修改原图，请继续处理工作副本。",
-                任务目录 = taskDirectory,
-                task.TaskId,
-                task.Status,
-                任务名称 = task.TaskName,
-                成品规格 = $"宽 {task.WidthMillimeters} 毫米 × 高 {task.HeightMillimeters} 毫米，印刷精度 {task.Dpi}",
-                拼接方式 = task.TilingMode,
-                输出格式 = task.OutputFormat,
-                task.Reviewer,
-                工作副本 = task.WorkingCopy,
-                处理结果目录 = task.OutputDirectory,
-                下一步 = "说“按这个任务直接做检查版”，或说明要修改的地方。"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            return SerializeTaskSummary(task);
         }
         catch (Exception exception)
         {
@@ -413,16 +397,17 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
             如果不知道下一步，直接说：下一步做什么？
             """;
 
-    private static string SerializeTaskSummary(DuanxingTaskRecord task)
+    private string SerializeTaskSummary(DuanxingTaskRecord task)
     {
         var taskDirectory = Directory.GetParent(task.OutputDirectory)?.FullName;
+        var progress = taskWorkspaceService.BuildTaskProgress(taskDirectory);
         return JsonSerializer.Serialize(new
         {
             成功 = true,
             提示 = "已找到最近任务。不要修改原图，请继续处理工作副本。",
             任务目录 = taskDirectory,
             task.TaskId,
-            task.Status,
+            当前进度 = progress.Status,
             任务名称 = task.TaskName,
             成品规格 = $"宽 {task.WidthMillimeters} 毫米 × 高 {task.HeightMillimeters} 毫米，印刷精度 {task.Dpi}",
             拼接方式 = task.TilingMode,
@@ -430,7 +415,7 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
             task.Reviewer,
             工作副本 = task.WorkingCopy,
             处理结果目录 = task.OutputDirectory,
-            下一步 = "说“直接继续”，或说明要修改的地方。"
+            下一步 = progress.NextStep
         }, new JsonSerializerOptions { WriteIndented = true });
     }
 }
