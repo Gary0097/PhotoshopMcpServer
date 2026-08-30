@@ -22,9 +22,12 @@ description: 使用中文通过 Codex 操作端行 Photoshop 2026 和 Illustrato
 - GPT 已购买且 Codex 已登录。
 - 本插件和 MCP 已启用。
 - Photoshop 2026 已安装、授权并能启动。
+- Photoshop 64 位自动控制类型库路径有效；若提示失效，让客户双击 `修复Adobe自动控制.cmd`，完全关闭 Photoshop/Codex 后重试。
 - Illustrator 2026 已安装、授权并能启动。
 
 VPN、账号和许可证无法自动确认时，用中文请客户确认。缺少前置条件时停止作图，只说明缺少项和解决办法。
+
+首次部署或 Adobe 升级后，运行 `运行端行Adobe现场自检.cmd`。只有它成功创建 Photoshop PNG、Illustrator AI 和中文自检记录后，才可以称为 Adobe 实际创建/保存链路已跑通。
 
 ## 作图入口
 

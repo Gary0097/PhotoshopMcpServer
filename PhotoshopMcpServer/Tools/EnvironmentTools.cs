@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Microsoft.Win32;
 using ModelContextProtocol.Server;
 using PhotoshopMcpServer.Services;
 
@@ -23,9 +24,11 @@ public class EnvironmentTools(
             ?? DefaultPhotoshopPath;
         var illustratorPath = Environment.GetEnvironmentVariable("DUANXING_ILLUSTRATOR_PATH")
             ?? DefaultIllustratorPath;
+        var photoshopTypeLibraryReady = IsPhotoshopTypeLibraryReady();
         var machineReady = CommandExists("codex") &&
             Directory.Exists(photoshopPath) &&
-            Directory.Exists(illustratorPath);
+            Directory.Exists(illustratorPath) &&
+            photoshopTypeLibraryReady;
         var result = new Dictionary<string, object>
         {
             ["自动检查结果"] = machineReady ? "通过" : "未通过",
@@ -34,7 +37,10 @@ public class EnvironmentTools(
             {
                 ["已找到安装目录"] = Directory.Exists(photoshopPath) ? "是" : "否",
                 ["安装目录"] = photoshopPath,
-                ["当前正在运行"] = photoshopService.IsPhotoshopRunning() ? "是" : "否"
+                ["当前正在运行"] = photoshopService.IsPhotoshopRunning() ? "是" : "否",
+                ["64位自动控制文件"] = photoshopTypeLibraryReady
+                    ? "正常"
+                    : "路径失效，请双击“修复Adobe自动控制.cmd”"
             },
             ["Illustrator 2026"] = new Dictionary<string, object>
             {
@@ -56,6 +62,41 @@ public class EnvironmentTools(
                 : "已关闭（生产安全模式）"
         };
         return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+    }
+
+    private static bool IsPhotoshopTypeLibraryReady()
+    {
+        try
+        {
+            var classId = Registry.GetValue(
+                @"HKEY_CLASSES_ROOT\Photoshop.Application\CLSID",
+                string.Empty,
+                null)?.ToString();
+            if (string.IsNullOrWhiteSpace(classId))
+                return false;
+            var typeLibraryId = Registry.GetValue(
+                $@"HKEY_CLASSES_ROOT\CLSID\{classId}\TypeLib",
+                string.Empty,
+                null)?.ToString();
+            if (string.IsNullOrWhiteSpace(typeLibraryId))
+                return false;
+            var typeLibraryRoot = $@"HKEY_CLASSES_ROOT\TypeLib\{typeLibraryId}\1.0\0";
+            var win64Path = Registry.GetValue(
+                $@"{typeLibraryRoot}\win64",
+                string.Empty,
+                null)?.ToString();
+            if (!string.IsNullOrWhiteSpace(win64Path))
+                return File.Exists(win64Path);
+            var win32Path = Registry.GetValue(
+                $@"{typeLibraryRoot}\Win32",
+                string.Empty,
+                null)?.ToString();
+            return !string.IsNullOrWhiteSpace(win32Path) && File.Exists(win32Path);
+        }
+        catch (Exception)
+        {
+            return false;
+        }
     }
 
     private static bool CommandExists(string command)

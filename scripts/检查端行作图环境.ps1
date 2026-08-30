@@ -31,6 +31,26 @@ $photoshopInstalled = Test-Path -LiteralPath $PhotoshopPath -PathType Container
 $illustratorInstalled = Test-Path -LiteralPath $IllustratorPath -PathType Container
 $photoshopCom = $null -ne [Type]::GetTypeFromProgID('Photoshop.Application')
 $illustratorCom = $null -ne [Type]::GetTypeFromProgID('Illustrator.Application')
+$photoshopTypeLibraryReady = $false
+if ($photoshopCom) {
+    $photoshopClsid = (Get-ItemProperty -LiteralPath `
+        'Registry::HKEY_CLASSES_ROOT\Photoshop.Application\CLSID' `
+        -ErrorAction SilentlyContinue).'(default)'
+    $photoshopTypeLib = (Get-ItemProperty -LiteralPath `
+        "Registry::HKEY_CLASSES_ROOT\CLSID\$photoshopClsid\TypeLib" `
+        -ErrorAction SilentlyContinue).'(default)'
+    $photoshopTypeLibBase = "Registry::HKEY_CLASSES_ROOT\TypeLib\$photoshopTypeLib\1.0\0"
+    $photoshopWin64Library = (Get-ItemProperty -LiteralPath `
+        "$photoshopTypeLibBase\win64" -ErrorAction SilentlyContinue).'(default)'
+    $photoshopWin32Library = (Get-ItemProperty -LiteralPath `
+        "$photoshopTypeLibBase\Win32" -ErrorAction SilentlyContinue).'(default)'
+    $photoshopTypeLibraryReady =
+        (-not [string]::IsNullOrWhiteSpace($photoshopWin64Library) -and
+            (Test-Path -LiteralPath $photoshopWin64Library -PathType Leaf)) -or
+        ([string]::IsNullOrWhiteSpace($photoshopWin64Library) -and
+            -not [string]::IsNullOrWhiteSpace($photoshopWin32Library) -and
+            (Test-Path -LiteralPath $photoshopWin32Library -PathType Leaf))
+}
 
 Write-CheckResult 'Codex' ($null -ne $codexCommand) `
     "已安装：$($codexCommand.Source)" `
@@ -41,6 +61,9 @@ Write-CheckResult 'Photoshop 2026 目录' $photoshopInstalled `
 Write-CheckResult 'Photoshop 自动控制' $photoshopCom `
     'Windows 已注册 Photoshop 自动控制接口' `
     '没有找到 Photoshop 自动控制接口。请启动一次 Photoshop 2026，仍失败时重新安装。'
+Write-CheckResult 'Photoshop 64 位控制文件' $photoshopTypeLibraryReady `
+    '类型库路径有效' `
+    '类型库路径失效。请双击“修复Adobe自动控制.cmd”，然后重新检查。'
 Write-CheckResult 'Illustrator 2026 目录' $illustratorInstalled `
     $IllustratorPath `
     "没有找到：$IllustratorPath"
@@ -56,7 +79,7 @@ Write-Host '[  ] Photoshop 2026 和 Illustrator 2026 均已激活'
 
 $automaticPassed = $null -ne $codexCommand -and
     $photoshopInstalled -and $illustratorInstalled -and
-    $photoshopCom -and $illustratorCom
+    $photoshopCom -and $photoshopTypeLibraryReady -and $illustratorCom
 
 Write-Host ''
 if ($automaticPassed) {
