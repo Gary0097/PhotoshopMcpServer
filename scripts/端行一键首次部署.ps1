@@ -85,4 +85,5 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host ''
 Write-Host '端行 Codex 作图助手首次部署完成。' -ForegroundColor Green
 Write-Host '请关闭旧 Codex 任务，打开新任务，把原图拖进去，然后说：' -ForegroundColor Yellow
-Write-Host '开始处理这张图：成品宽200毫米、高200毫米，精度2540，复核人张三。其他按默认。'
+Write-Host '做这张。'
+Write-Host '第一次系统会集中询问宽、高、精度和复核人；照实际生产规格回答即可。'
