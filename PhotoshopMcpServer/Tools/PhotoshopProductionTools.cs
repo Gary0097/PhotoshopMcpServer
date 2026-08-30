@@ -292,12 +292,13 @@ public class PhotoshopProductionTools(
             var task = taskWorkspaceService.LoadTask(任务目录);
             if (!taskWorkspaceService.IsApproved(任务目录))
                 return "禁止导出生产版：请先由指定人员复核，并保存“通过”结论。";
-
             var sourcePath = Path.GetFullPath(已复核结果文件);
             if (!File.Exists(sourcePath))
                 return "无法导出：找不到已复核结果文件。";
             if (!IsPathInside(sourcePath, task.OutputDirectory))
                 return "禁止导出：源文件必须位于当前任务的“02_处理结果”目录。";
+            if (!taskWorkspaceService.IsResultApproved(任务目录, sourcePath))
+                return "禁止导出生产版：这个文件不是复核时批准的版本，或文件内容已经改变。请重新生成复核单并明确通过。";
 
             var normalizedFormat = (输出格式 ?? string.Empty).Trim().ToUpperInvariant();
             var extension = normalizedFormat switch

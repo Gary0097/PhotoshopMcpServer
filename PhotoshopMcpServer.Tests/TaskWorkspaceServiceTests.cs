@@ -64,6 +64,7 @@ public class TaskWorkspaceServiceTests : IDisposable
             "不拼接", "PNG", "王五"));
         var taskDirectory = Directory.GetParent(task.OutputDirectory)?.FullName
             ?? throw new InvalidOperationException("Task directory was not created.");
+        File.WriteAllText(Path.Combine(task.OutputDirectory, "待复核.png"), "result");
 
         var review = service.SaveReview(taskDirectory, "王五", true, "可以生产");
 
@@ -129,6 +130,7 @@ public class TaskWorkspaceServiceTests : IDisposable
             "不拼接", "JPEG", "王五"));
         var taskDirectory = Directory.GetParent(task.OutputDirectory)?.FullName
             ?? throw new InvalidOperationException("Task directory was not created.");
+        File.WriteAllText(Path.Combine(task.OutputDirectory, "初版.jpg"), "first-result");
         service.SaveReview(taskDirectory, "王五", true, "通过");
 
         service.RegisterAiResult(taskDirectory, generated, "清晰修复", "恢复细节");
@@ -174,6 +176,98 @@ public class TaskWorkspaceServiceTests : IDisposable
 
         action.Should().Throw<InvalidOperationException>()
             .WithMessage("*还没有默认任务*");
+    }
+
+    [Fact]
+    public void BuildReviewSummary_ReportsProtectionAiAndManualChecks()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var source = Path.Combine(_testRoot, "原图.png");
+        var generated = Path.Combine(_testRoot, "AI结果.png");
+        File.WriteAllText(source, "original");
+        File.WriteAllText(generated, "generated");
+        var service = new TaskWorkspaceService();
+        var task = service.PrepareTask(new DuanxingTaskRequest(
+            source, Path.Combine(_testRoot, "输出"), "复核摘要", 200, 100, 2540,
+            "平铺", "TIFF", "张三"));
+        var taskDirectory = Directory.GetParent(task.OutputDirectory)?.FullName
+            ?? throw new InvalidOperationException("Task directory was not created.");
+        service.RegisterAiResult(taskDirectory, generated, "纹理生成", "保持色系");
+
+        var summary = service.BuildReviewSummary(taskDirectory);
+
+        summary.OriginalUnchanged.Should().BeTrue();
+        summary.WorkingCopyExists.Should().BeTrue();
+        summary.ResultFileCount.Should().Be(1);
+        summary.AiResultCount.Should().Be(1);
+        summary.LatestAiOperation.Should().Be("纹理生成");
+        summary.Approved.Should().BeFalse();
+        summary.ManualChecklist.Should().Contain(item => item.Contains("中央横缝"));
+    }
+
+    [Fact]
+    public void BuildReviewSummary_DetectsChangedOriginal()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var source = Path.Combine(_testRoot, "原图.jpg");
+        File.WriteAllText(source, "original");
+        var service = new TaskWorkspaceService();
+        var task = service.PrepareTask(new DuanxingTaskRequest(
+            source, Path.Combine(_testRoot, "输出"), "原图保护", 100, 100, 1270,
+            "不拼接", "JPEG", "李四"));
+        var taskDirectory = Directory.GetParent(task.OutputDirectory)?.FullName
+            ?? throw new InvalidOperationException("Task directory was not created.");
+        File.WriteAllText(source, "changed");
+
+        var summary = service.BuildReviewSummary(taskDirectory);
+
+        summary.OriginalUnchanged.Should().BeFalse();
+        summary.ManualChecklist.Should().Contain(item => item.Contains("成品裁切范围"));
+    }
+
+    [Fact]
+    public void IsResultApproved_BindsApprovalToExactFileAndHash()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var source = Path.Combine(_testRoot, "原图.png");
+        File.WriteAllText(source, "original");
+        var service = new TaskWorkspaceService();
+        var task = service.PrepareTask(new DuanxingTaskRequest(
+            source, Path.Combine(_testRoot, "输出"), "绑定复核", 100, 100, 1270,
+            "平铺", "TIFF", "张三"));
+        var taskDirectory = Directory.GetParent(task.OutputDirectory)?.FullName
+            ?? throw new InvalidOperationException("Task directory was not created.");
+        var approvedFile = Path.Combine(task.OutputDirectory, "检查版.png");
+        var otherFile = Path.Combine(task.OutputDirectory, "其他版本.png");
+        File.WriteAllText(approvedFile, "approved-content");
+        service.SaveReview(taskDirectory, "张三", true, "通过");
+        File.WriteAllText(otherFile, "other-content");
+
+        service.IsResultApproved(taskDirectory, approvedFile).Should().BeTrue();
+        service.IsResultApproved(taskDirectory, otherFile).Should().BeFalse();
+
+        File.WriteAllText(approvedFile, "changed-after-approval");
+        service.IsApproved(taskDirectory).Should().BeFalse();
+        service.IsResultApproved(taskDirectory, approvedFile).Should().BeFalse();
+    }
+
+    [Fact]
+    public void SaveReview_WithoutResult_CannotApprove()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var source = Path.Combine(_testRoot, "原图.png");
+        File.WriteAllText(source, "original");
+        var service = new TaskWorkspaceService();
+        var task = service.PrepareTask(new DuanxingTaskRequest(
+            source, Path.Combine(_testRoot, "输出"), "空结果", 100, 100, 1270,
+            "平铺", "TIFF", "张三"));
+        var taskDirectory = Directory.GetParent(task.OutputDirectory)?.FullName
+            ?? throw new InvalidOperationException("Task directory was not created.");
+
+        var action = () => service.SaveReview(taskDirectory, "张三", true, "通过");
+
+        action.Should().Throw<InvalidOperationException>()
+            .WithMessage("*还没有处理结果*");
     }
 
     public void Dispose()

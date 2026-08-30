@@ -174,7 +174,52 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
                 成功 = true,
                 review.Status,
                 review.Reviewer,
-                review.Comment
+                review.Comment,
+                已批准文件 = string.IsNullOrEmpty(review.ResultFile) ? "无" : review.ResultFile,
+                文件校验值 = string.IsNullOrEmpty(review.ResultSha256) ? "无" : review.ResultSha256
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception exception)
+        {
+            return JsonSerializer.Serialize(new
+            {
+                成功 = false,
+                提示 = exception.Message
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+    }
+
+    [McpServerTool(Name = "duanxing_get_review_card")]
+    [Description(
+        "生成客户看得懂的中文复核单：汇总最新结果、原图保护、AI 记录、当前批准状态和必须人工检查的项目。" +
+        "展示后只让客户回答“通过”或“退回修改”。")]
+    public string 生成中文复核单(
+        [Description("包含 task.json 的端行任务目录。")]
+        string 任务目录)
+    {
+        try
+        {
+            var task = taskWorkspaceService.LoadTask(任务目录);
+            var summary = taskWorkspaceService.BuildReviewSummary(任务目录);
+            return JsonSerializer.Serialize(new
+            {
+                成功 = true,
+                标题 = $"{task.TaskName}－复核单",
+                结果文件 = string.IsNullOrEmpty(summary.LatestResultFile)
+                    ? "尚未生成结果"
+                    : summary.LatestResultFile,
+                结果文件数量 = summary.ResultFileCount,
+                AI处理次数 = summary.AiResultCount,
+                最近AI处理 = string.IsNullOrEmpty(summary.LatestAiOperation)
+                    ? "没有 AI 处理记录"
+                    : summary.LatestAiOperation,
+                原图保护 = summary.OriginalUnchanged ? "通过：原图未改变" : "异常：原图丢失或内容发生变化",
+                工作副本 = summary.WorkingCopyExists ? "通过：工作副本存在" : "异常：找不到工作副本",
+                当前复核状态 = summary.ReviewStatus,
+                需要人工检查 = summary.ManualChecklist,
+                请回答 = summary.ResultFileCount == 0
+                    ? "请先生成检查版，暂时不能复核。"
+                    : "请只回答：通过，或退回修改并说明哪里要改。"
             }, new JsonSerializerOptions { WriteIndented = true });
         }
         catch (Exception exception)

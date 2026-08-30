@@ -77,13 +77,29 @@ public sealed partial class TaskWorkspaceService : ITaskWorkspaceService
 
         var fullTaskDirectory = Path.GetFullPath(taskDirectory);
         var task = LoadTask(fullTaskDirectory);
+        var resultFile = string.Empty;
+        var resultSha256 = string.Empty;
+        if (approved)
+        {
+            var resultFiles = Directory.Exists(task.OutputDirectory)
+                ? Directory.GetFiles(task.OutputDirectory)
+                    .OrderByDescending(File.GetLastWriteTimeUtc)
+                    .ToArray()
+                : [];
+            if (resultFiles.Length == 0)
+                throw new InvalidOperationException("还没有处理结果，不能记录“通过”。请先生成检查版。");
+            resultFile = resultFiles[0];
+            resultSha256 = CalculateSha256(resultFile);
+        }
         var review = new DuanxingReviewRecord(
             task.TaskId,
             DateTimeOffset.Now.ToString("O"),
             reviewer.Trim(),
             approved,
             comment?.Trim() ?? string.Empty,
-            approved ? "已批准，可导出生产版" : "已退回，需要修改");
+            approved ? "已批准，可导出生产版" : "已退回，需要修改",
+            resultFile,
+            resultSha256);
         var reviewDirectory = Path.Combine(fullTaskDirectory, "03_复核记录");
         Directory.CreateDirectory(reviewDirectory);
         WriteJson(Path.Combine(reviewDirectory, $"review-{DateTime.Now:yyyyMMdd-HHmmss-fff}.json"), review);
@@ -190,16 +206,94 @@ public sealed partial class TaskWorkspaceService : ITaskWorkspaceService
     public bool IsApproved(string taskDirectory)
     {
         var task = LoadTask(taskDirectory);
-        var reviewDirectory = Path.Combine(Path.GetFullPath(taskDirectory), "03_复核记录");
-        if (!Directory.Exists(reviewDirectory))
+        var review = LoadLatestReview(Path.GetFullPath(taskDirectory));
+        return review != null &&
+            review.TaskId == task.TaskId &&
+            review.Approved &&
+            IsReviewResultValid(task, review);
+    }
+
+    public bool IsResultApproved(string taskDirectory, string resultFile)
+    {
+        var task = LoadTask(taskDirectory);
+        var review = LoadLatestReview(Path.GetFullPath(taskDirectory));
+        if (review == null || review.TaskId != task.TaskId || !review.Approved)
             return false;
+        var requestedPath = Path.GetFullPath(resultFile);
+        return string.Equals(requestedPath, Path.GetFullPath(review.ResultFile), StringComparison.OrdinalIgnoreCase) &&
+            IsReviewResultValid(task, review);
+    }
+
+    public DuanxingReviewSummary BuildReviewSummary(string taskDirectory)
+    {
+        var fullTaskDirectory = Path.GetFullPath(taskDirectory);
+        var task = LoadTask(fullTaskDirectory);
+        var resultFiles = Directory.Exists(task.OutputDirectory)
+            ? Directory.GetFiles(task.OutputDirectory)
+                .OrderByDescending(File.GetLastWriteTimeUtc)
+                .ToArray()
+            : [];
+        var aiDirectory = Path.Combine(fullTaskDirectory, "05_AI记录");
+        var aiRecords = Directory.Exists(aiDirectory)
+            ? Directory.GetFiles(aiDirectory, "ai-*.json")
+                .OrderByDescending(File.GetLastWriteTimeUtc)
+                .ToArray()
+            : [];
+        DuanxingAiResultRecord latestAiRecord = null;
+        if (aiRecords.Length > 0)
+            latestAiRecord = JsonSerializer.Deserialize<DuanxingAiResultRecord>(File.ReadAllText(aiRecords[0]));
+        var latestReview = LoadLatestReview(fullTaskDirectory);
+        var approved = latestReview != null && latestReview.TaskId == task.TaskId && latestReview.Approved;
+        var checklist = new List<string>
+        {
+            $"尺寸应为 {task.WidthMillimeters} × {task.HeightMillimeters} mm，{task.Dpi} DPI",
+            "检查主体纹理、颜色和清晰度是否符合样板",
+            "检查图片中没有多余文字、标志、边框或无关内容"
+        };
+        if (task.TilingMode == "平铺")
+            checklist.Add("检查中央横缝、中央竖缝以及四边连续性");
+        else if (task.TilingMode == "1/2错位")
+            checklist.Add("检查中间竖缝、右列横向连续性和半高错位位置");
+        else
+            checklist.Add("检查画面边缘和成品裁切范围");
+
+        return new DuanxingReviewSummary(
+            task.TaskId,
+            fullTaskDirectory,
+            resultFiles.FirstOrDefault() ?? string.Empty,
+            resultFiles.Length,
+            aiRecords.Length,
+            latestAiRecord?.Operation ?? string.Empty,
+            File.Exists(task.SourceFile) && CalculateSha256(task.SourceFile) == task.SourceSha256,
+            File.Exists(task.WorkingCopy),
+            approved,
+            latestReview?.Status ?? "尚未复核",
+            checklist);
+    }
+
+    private static DuanxingReviewRecord LoadLatestReview(string taskDirectory)
+    {
+        var reviewDirectory = Path.Combine(taskDirectory, "03_复核记录");
+        if (!Directory.Exists(reviewDirectory))
+            return null;
         var latestReview = Directory.GetFiles(reviewDirectory, "review-*.json")
             .OrderByDescending(File.GetLastWriteTimeUtc)
             .FirstOrDefault();
-        if (latestReview == null)
+        return latestReview == null
+            ? null
+            : JsonSerializer.Deserialize<DuanxingReviewRecord>(File.ReadAllText(latestReview));
+    }
+
+    private static bool IsReviewResultValid(DuanxingTaskRecord task, DuanxingReviewRecord review)
+    {
+        if (string.IsNullOrWhiteSpace(review.ResultFile) || string.IsNullOrWhiteSpace(review.ResultSha256))
             return false;
-        var review = JsonSerializer.Deserialize<DuanxingReviewRecord>(File.ReadAllText(latestReview));
-        return review != null && review.TaskId == task.TaskId && review.Approved;
+        var resultPath = Path.GetFullPath(review.ResultFile);
+        var outputDirectory = Path.GetFullPath(task.OutputDirectory)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        if (!resultPath.StartsWith(outputDirectory, StringComparison.OrdinalIgnoreCase) || !File.Exists(resultPath))
+            return false;
+        return CalculateSha256(resultPath) == review.ResultSha256;
     }
 
     private static void ValidateRequest(DuanxingTaskRequest request)

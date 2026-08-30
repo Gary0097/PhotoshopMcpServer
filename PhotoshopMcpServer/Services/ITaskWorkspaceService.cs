@@ -8,6 +8,8 @@ public interface ITaskWorkspaceService
     DuanxingTaskRecord LoadTask(string taskDirectory);
     DuanxingTaskRecord FindLatestTaskForSource(string sourceFile);
     bool IsApproved(string taskDirectory);
+    bool IsResultApproved(string taskDirectory, string resultFile);
+    DuanxingReviewSummary BuildReviewSummary(string taskDirectory);
     DuanxingAiResultRecord RegisterAiResult(
         string taskDirectory,
         string generatedFile,

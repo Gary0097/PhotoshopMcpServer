@@ -66,6 +66,26 @@ public class DuanxingWorkflowToolsTests : IDisposable
         root.GetProperty("下一步").GetString().Should().Contain("直接做检查版");
     }
 
+    [Fact]
+    public void ReviewCard_WithoutResult_TellsCustomerWhatToDo()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var source = Path.Combine(_testRoot, "木纹原图.png");
+        File.WriteAllText(source, "sample");
+        var tools = new DuanxingWorkflowTools(new TaskWorkspaceService());
+        var prepareJson = tools.极简开始作图(source, 200, 100, 2540, "张三");
+        using var prepareDocument = JsonDocument.Parse(prepareJson);
+        var taskDirectory = prepareDocument.RootElement.GetProperty("任务目录").GetString();
+
+        var json = tools.生成中文复核单(taskDirectory);
+
+        using var document = JsonDocument.Parse(json);
+        var root = document.RootElement;
+        root.GetProperty("成功").GetBoolean().Should().BeTrue();
+        root.GetProperty("结果文件").GetString().Should().Be("尚未生成结果");
+        root.GetProperty("请回答").GetString().Should().Contain("暂时不能复核");
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_testRoot))

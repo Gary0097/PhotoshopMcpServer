@@ -39,7 +39,9 @@ public record DuanxingReviewRecord(
     string Reviewer,
     bool Approved,
     string Comment,
-    string Status
+    string Status,
+    string ResultFile,
+    string ResultSha256
 );
 
 public record DuanxingAiResultRecord(
@@ -51,4 +53,18 @@ public record DuanxingAiResultRecord(
     string ResultFile,
     string ResultSha256,
     string Status
+);
+
+public record DuanxingReviewSummary(
+    string TaskId,
+    string TaskDirectory,
+    string LatestResultFile,
+    int ResultFileCount,
+    int AiResultCount,
+    string LatestAiOperation,
+    bool OriginalUnchanged,
+    bool WorkingCopyExists,
+    bool Approved,
+    string ReviewStatus,
+    IReadOnlyList<string> ManualChecklist
 );

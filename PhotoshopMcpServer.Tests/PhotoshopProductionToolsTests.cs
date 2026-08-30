@@ -112,6 +112,7 @@ public class PhotoshopProductionToolsTests
             _taskWorkspaceService.Setup(service => service.LoadTask(taskDirectory))
                 .Returns(CreateTask(outputDirectory));
             _taskWorkspaceService.Setup(service => service.IsApproved(taskDirectory)).Returns(true);
+            _taskWorkspaceService.Setup(service => service.IsResultApproved(taskDirectory, source)).Returns(true);
             _photoshopService.Setup(service => service.ExecuteJavaScriptWithResult(It.IsAny<string>()))
                 .Returns(new PhotoshopScriptResult(true, "ok", string.Empty));
             var tools = new PhotoshopProductionTools(
