@@ -70,6 +70,23 @@ public class TaskWorkspaceServiceTests : IDisposable
         review.Status.Should().Be("已批准，可导出生产版");
         Directory.GetFiles(Path.Combine(taskDirectory, "03_复核记录"), "review-*.json")
             .Should().ContainSingle();
+        service.IsApproved(taskDirectory).Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsApproved_WithoutReview_ReturnsFalse()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var source = Path.Combine(_testRoot, "原图.jpg");
+        File.WriteAllText(source, "sample");
+        var service = new TaskWorkspaceService();
+        var task = service.PrepareTask(new DuanxingTaskRequest(
+            source, Path.Combine(_testRoot, "输出"), "待复核", 100, 100, 1270,
+            "不拼接", "JPEG", "赵六"));
+        var taskDirectory = Directory.GetParent(task.OutputDirectory)?.FullName
+            ?? throw new InvalidOperationException("Task directory was not created.");
+
+        service.IsApproved(taskDirectory).Should().BeFalse();
     }
 
     public void Dispose()

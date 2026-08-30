@@ -76,12 +76,7 @@ public sealed partial class TaskWorkspaceService : ITaskWorkspaceService
             throw new ArgumentException("复核人不能为空。", nameof(reviewer));
 
         var fullTaskDirectory = Path.GetFullPath(taskDirectory);
-        var taskFile = Path.Combine(fullTaskDirectory, "task.json");
-        if (!File.Exists(taskFile))
-            throw new InvalidOperationException("没有找到 task.json，这不是有效的端行任务目录。");
-
-        var task = JsonSerializer.Deserialize<DuanxingTaskRecord>(File.ReadAllText(taskFile))
-            ?? throw new InvalidOperationException("任务记录无法读取。");
+        var task = LoadTask(fullTaskDirectory);
         var review = new DuanxingReviewRecord(
             task.TaskId,
             DateTimeOffset.Now.ToString("O"),
@@ -91,8 +86,35 @@ public sealed partial class TaskWorkspaceService : ITaskWorkspaceService
             approved ? "已批准，可导出生产版" : "已退回，需要修改");
         var reviewDirectory = Path.Combine(fullTaskDirectory, "03_复核记录");
         Directory.CreateDirectory(reviewDirectory);
-        WriteJson(Path.Combine(reviewDirectory, $"review-{DateTime.Now:yyyyMMdd-HHmmss}.json"), review);
+        WriteJson(Path.Combine(reviewDirectory, $"review-{DateTime.Now:yyyyMMdd-HHmmss-fff}.json"), review);
         return review;
+    }
+
+    public DuanxingTaskRecord LoadTask(string taskDirectory)
+    {
+        if (string.IsNullOrWhiteSpace(taskDirectory))
+            throw new ArgumentException("任务目录不能为空。", nameof(taskDirectory));
+        var fullTaskDirectory = Path.GetFullPath(taskDirectory);
+        var taskFile = Path.Combine(fullTaskDirectory, "task.json");
+        if (!File.Exists(taskFile))
+            throw new InvalidOperationException("没有找到 task.json，这不是有效的端行任务目录。");
+        return JsonSerializer.Deserialize<DuanxingTaskRecord>(File.ReadAllText(taskFile))
+            ?? throw new InvalidOperationException("任务记录无法读取。");
+    }
+
+    public bool IsApproved(string taskDirectory)
+    {
+        var task = LoadTask(taskDirectory);
+        var reviewDirectory = Path.Combine(Path.GetFullPath(taskDirectory), "03_复核记录");
+        if (!Directory.Exists(reviewDirectory))
+            return false;
+        var latestReview = Directory.GetFiles(reviewDirectory, "review-*.json")
+            .OrderByDescending(File.GetLastWriteTimeUtc)
+            .FirstOrDefault();
+        if (latestReview == null)
+            return false;
+        var review = JsonSerializer.Deserialize<DuanxingReviewRecord>(File.ReadAllText(latestReview));
+        return review != null && review.TaskId == task.TaskId && review.Approved;
     }
 
     private static void ValidateRequest(DuanxingTaskRequest request)
