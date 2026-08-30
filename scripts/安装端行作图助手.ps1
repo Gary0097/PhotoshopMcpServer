@@ -4,6 +4,12 @@
 
 $ErrorActionPreference = 'Stop'
 $OutputEncoding = [System.Text.UTF8Encoding]::new()
+trap {
+    Write-Host ''
+    Write-Host "安装未完成：$($_.Exception.Message)" -ForegroundColor Red
+    Write-Host '请把本窗口拍照发给实施人员。'
+    exit 1
+}
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $pluginManifest = Join-Path $repositoryRoot `
     'plugins\duanxing-creative-automation\.codex-plugin\plugin.json'
@@ -40,19 +46,49 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host ''
 Write-Host '第 2/3 步：添加端行本地插件来源'
-& codex plugin marketplace add $repositoryRoot --json
+$marketplaceJson = & codex plugin marketplace list --json | Out-String
 if ($LASTEXITCODE -ne 0) {
-    throw '添加插件来源失败。请把本窗口内容发给实施人员。'
+    throw '无法读取 Codex 插件来源。'
+}
+$marketplaces = ($marketplaceJson | ConvertFrom-Json).marketplaces
+$personalMarketplace = $marketplaces | Where-Object { $_.name -eq 'personal' } | Select-Object -First 1
+if ($null -eq $personalMarketplace) {
+    $null = & codex plugin marketplace add $repositoryRoot --json
+    if ($LASTEXITCODE -ne 0) {
+        throw '添加端行插件来源失败。'
+    }
+    Write-Host '已添加端行插件来源。' -ForegroundColor Green
+}
+else {
+    $configuredRoot = [IO.Path]::GetFullPath(($personalMarketplace.root -replace '^\\\\\?\\', ''))
+    $currentRoot = [IO.Path]::GetFullPath($repositoryRoot)
+    if (-not [string]::Equals($configuredRoot, $currentRoot, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Codex 中已有名为 personal 的其他插件来源：$configuredRoot。请不要删除它，联系实施人员处理。"
+    }
+    Write-Host '端行插件来源已经存在，自动跳过。' -ForegroundColor Green
 }
 
 Write-Host ''
 Write-Host '第 3/3 步：安装端行作图助手'
-& codex plugin add 'duanxing-creative-automation@personal' --json
+$installJson = & codex plugin add 'duanxing-creative-automation@personal' --json | Out-String
 if ($LASTEXITCODE -ne 0) {
-    throw '安装插件失败。请把本窗口内容发给实施人员。'
+    throw '安装或更新端行作图助手失败。'
 }
+$installResult = $installJson | ConvertFrom-Json
+$serverPath = Join-Path $installResult.installedPath 'server\win-x64\PhotoshopMcpServer.exe'
+if (-not (Test-Path -LiteralPath $serverPath -PathType Leaf)) {
+    throw '插件已登记，但没有找到作图服务程序。'
+}
+$serverProcess = Start-Process -FilePath $serverPath -PassThru -WindowStyle Hidden
+Start-Sleep -Seconds 3
+if ($serverProcess.HasExited) {
+    throw "作图服务启动失败，退出代码：$($serverProcess.ExitCode)"
+}
+Stop-Process -Id $serverProcess.Id -Force
 
 Write-Host ''
 Write-Host '安装完成。' -ForegroundColor Green
+Write-Host "版本：$($installResult.version)"
+Write-Host '作图服务健康检查：通过' -ForegroundColor Green
 Write-Host '请关闭当前 Codex 任务，打开一个新任务，然后输入：'
 Write-Host '检查端行作图环境。' -ForegroundColor Yellow

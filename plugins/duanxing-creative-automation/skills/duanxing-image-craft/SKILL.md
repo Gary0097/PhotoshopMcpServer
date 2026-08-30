@@ -17,7 +17,7 @@ description: 使用中文通过 Codex 操作端行 Photoshop 2026 和 Illustrato
 
 ## 必做环境检查
 
-每个新会话第一次操作 Adobe 前调用 `CheckDuanxingEnvironment`。必须满足：
+每个新会话第一次操作 Adobe 前调用 `duanxing_check_environment`。必须满足：
 
 - GPT 已购买且 Codex 已登录。
 - 本插件和 MCP 已启用。
