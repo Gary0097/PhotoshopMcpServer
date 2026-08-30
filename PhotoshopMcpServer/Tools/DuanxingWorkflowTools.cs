@@ -50,11 +50,60 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
                 成功 = true,
                 提示 = "任务已建立。请只处理工作副本，完成后交给指定人员复核。",
                 任务编号 = record.TaskId,
+                任务目录 = Directory.GetParent(record.OutputDirectory)?.FullName,
                 工作副本 = record.WorkingCopy,
                 处理结果目录 = record.OutputDirectory,
                 目标像素 = $"{record.TargetWidthPixels} × {record.TargetHeightPixels}",
                 record.Warnings
             }, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception exception)
+        {
+            return JsonSerializer.Serialize(new
+            {
+                成功 = false,
+                提示 = exception.Message
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+    }
+
+    [McpServerTool(Name = "duanxing_prepare_task_simple")]
+    [Description(
+        "极简开始端行作图：客户只需提供原图、成品宽高、DPI 和复核人。" +
+        "自动使用原图旁边的“端行作图输出”目录、自动生成中文任务名，默认平铺并输出 TIFF。")]
+    public string 极简开始作图(
+        [Description("原图完整路径；也可以是客户刚拖入 Codex 的图片路径。")]
+        string 原图路径,
+        [Description("成品宽度，单位 mm；这是生产参数，不能猜。")]
+        double 成品宽度毫米,
+        [Description("成品高度，单位 mm；这是生产参数，不能猜。")]
+        double 成品高度毫米,
+        [Description("目标 DPI；这是生产参数，不能猜。")]
+        int 目标DPI,
+        [Description("最终看图并确认能否生产的人员姓名。")]
+        string 复核人,
+        [Description("默认填“平铺”；也可填“不拼接”或“1/2错位”。")]
+        string 拼接方式 = "平铺",
+        [Description("默认 TIFF；需要时可填 PSD、PSB、PNG 或 JPEG。")]
+        string 输出格式 = "TIFF")
+    {
+        try
+        {
+            var fullSourcePath = Path.GetFullPath(原图路径);
+            var sourceDirectory = Path.GetDirectoryName(fullSourcePath)
+                ?? throw new InvalidOperationException("无法确定原图所在目录。");
+            var outputRoot = Path.Combine(sourceDirectory, "端行作图输出");
+            var taskName = $"{Path.GetFileNameWithoutExtension(fullSourcePath)}_{拼接方式}";
+            return 开始端行作图任务(
+                fullSourcePath,
+                outputRoot,
+                taskName,
+                成品宽度毫米,
+                成品高度毫米,
+                目标DPI,
+                拼接方式,
+                输出格式,
+                复核人);
         }
         catch (Exception exception)
         {
@@ -144,7 +193,7 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
     public string 获取中文作图口令()
         => """
             1. 检查环境
-            2. 开始处理这张图：D:\样板\原图.tif，成品 200×200 mm，2540 DPI，平铺无缝，输出 TIFF，复核人张三
+            2. 开始处理这张图：成品 200×200 mm，2540 DPI，复核人张三。其他按默认，先出预览
             3. 把当前图做成 1/2 错位无缝，先出预览，不要覆盖原图
             4. 按 S 型折光线处理：线宽___，间距___，角度___，同时输出 TIFF 和 AI
             5. 检查尺寸、DPI、接缝和文件名，生成复核记录
