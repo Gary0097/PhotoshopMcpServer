@@ -109,6 +109,43 @@ public class DuanxingQuickActionToolsTests : IDisposable
     }
 
     [Fact]
+    public void ShowLatestResult_ReturnsPreviewAndChineseReviewCardTogether()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var source = Path.Combine(_testRoot, "待复核.png");
+        File.WriteAllText(source, "original");
+        var service = CreateService();
+        var task = service.PrepareTask(new DuanxingTaskRequest(
+            source,
+            Path.Combine(_testRoot, "输出"),
+            "待复核样板",
+            200,
+            100,
+            2540,
+            "平铺",
+            "TIFF",
+            "张三"));
+        File.WriteAllText(Path.Combine(task.OutputDirectory, "检查版.psd"), "result");
+        var photoshop = new Mock<IPhotoshopService>();
+        photoshop
+            .Setup(item => item.ExecuteJavaScriptWithResult(It.IsAny<string>()))
+            .Returns(new PhotoshopScriptResult(true, "ok", string.Empty));
+        var tools = new DuanxingQuickActionTools(service, photoshop.Object);
+
+        var json = tools.查看最近结果();
+
+        using var document = JsonDocument.Parse(json);
+        document.RootElement.GetProperty("成功").GetBoolean().Should().BeTrue();
+        document.RootElement.GetProperty("已完成").GetString()
+            .Should().Contain("中文复核单");
+        document.RootElement.GetProperty("中文复核单").GetProperty("请回答").GetString()
+            .Should().Contain("请只回答");
+        photoshop.Verify(
+            item => item.ExecuteJavaScriptWithResult(It.IsAny<string>()),
+            Times.Once);
+    }
+
+    [Fact]
     public void StartAndRun_InvalidSize_ReturnsOnlyChineseCustomerMessage()
     {
         Directory.CreateDirectory(_testRoot);

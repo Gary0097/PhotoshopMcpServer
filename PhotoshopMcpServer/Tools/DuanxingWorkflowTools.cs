@@ -383,8 +383,8 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
             继续上次。
 
             3.【复核】看完结果后说：
-            生成中文复核单。
-            然后只回答“通过”或“退回修改：哪里要改”。
+            通过。
+            如果不满意就说“退回修改：哪里要改”。
 
             4.【导出】通过后说：
             直接导出生产版。

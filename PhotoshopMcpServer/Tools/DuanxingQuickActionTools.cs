@@ -302,7 +302,7 @@ public class DuanxingQuickActionTools(
         }
     }
 
-    private static string CreateCheckAndPreview(
+    private string CreateCheckAndPreview(
         PhotoshopProductionTools tools,
         string taskDirectory)
     {
@@ -317,25 +317,31 @@ public class DuanxingQuickActionTools(
                 "检查版已经生成，但预览没有显示",
                 "说“给我看结果”重试预览；仍失败时联系实施人员。",
                 checkResult);
+        var reviewCard = new DuanxingWorkflowTools(taskWorkspaceService)
+            .生成中文复核单(taskDirectory);
         return SerializeResult(
             true,
-            "检查版和预览已经生成",
+            "检查版已经生成，预览和中文复核单也已生成",
             "请查看预览，然后只回答“通过”或“退回修改”。",
-            previewResult);
+            previewResult,
+            reviewCard);
     }
 
-    private static string ShowPreview(
+    private string ShowPreview(
         PhotoshopProductionTools tools,
         string taskDirectory)
     {
         var previewResult = tools.生成复核预览图(taskDirectory);
-        return OperationFailed(previewResult)
-            ? SerializeResult(false, "预览没有生成", previewResult)
-            : SerializeResult(
-                true,
-                "复核预览已经生成",
-                "请查看预览，然后只回答“通过”或“退回修改”。",
-                previewResult);
+        if (OperationFailed(previewResult))
+            return SerializeResult(false, "预览没有生成", previewResult);
+        var reviewCard = new DuanxingWorkflowTools(taskWorkspaceService)
+            .生成中文复核单(taskDirectory);
+        return SerializeResult(
+            true,
+            "复核预览和中文复核单已经生成",
+            "请查看预览，然后只回答“通过”或“退回修改”。",
+            previewResult,
+            reviewCard);
     }
 
     private static string ExportProduction(
@@ -368,12 +374,28 @@ public class DuanxingQuickActionTools(
         bool succeeded,
         string completed,
         string nextStep,
-        string detail = "")
-        => JsonSerializer.Serialize(new
+        string detail = "",
+        string reviewCard = "")
+    {
+        object customerReviewCard = "无";
+        if (!string.IsNullOrWhiteSpace(reviewCard))
+        {
+            try
+            {
+                customerReviewCard = JsonSerializer.Deserialize<JsonElement>(reviewCard);
+            }
+            catch (JsonException)
+            {
+                customerReviewCard = reviewCard;
+            }
+        }
+        return JsonSerializer.Serialize(new
         {
             成功 = succeeded,
             已完成 = completed,
             处理详情 = string.IsNullOrWhiteSpace(detail) ? "无" : detail,
+            中文复核单 = customerReviewCard,
             下一步 = nextStep
         }, new JsonSerializerOptions { WriteIndented = true });
+    }
 }

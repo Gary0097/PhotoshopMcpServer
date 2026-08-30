@@ -21,7 +21,10 @@ public sealed class AdobeSelfTestRunner(
         var illustratorFile = Path.Combine(outputDirectory, "Illustrator_自检.ai");
         var messages = new List<string>();
 
-        photoshopService.LaunchPhotoshop();
+        LaunchAndWait(
+            photoshopService.LaunchPhotoshop,
+            photoshopService.IsPhotoshopRunning,
+            "Photoshop 没有完成启动，请确认软件已激活且没有许可或恢复文档弹窗。");
         var photoshopVersion = Retry(
             photoshopService.GetPhotoshopVersion,
             version => !string.IsNullOrWhiteSpace(version),
@@ -35,7 +38,10 @@ public sealed class AdobeSelfTestRunner(
                 $"Photoshop 自检失败：{photoshopResult.ErrorMessage}".TrimEnd('：'));
         messages.Add("Photoshop 已创建并保存非敏感测试图。客户原图未被读取。");
 
-        illustratorService.LaunchIllustrator();
+        LaunchAndWait(
+            illustratorService.LaunchIllustrator,
+            illustratorService.IsIllustratorRunning,
+            "Illustrator 没有完成启动，请确认软件已激活且没有许可或恢复文档弹窗。");
         var illustratorVersion = Retry(
             illustratorService.GetIllustratorVersion,
             version => !string.IsNullOrWhiteSpace(version),
@@ -80,6 +86,22 @@ public sealed class AdobeSelfTestRunner(
                 Thread.Sleep(retryDelayMilliseconds);
         }
         throw new InvalidOperationException(timeoutMessage, lastException);
+    }
+
+    private void LaunchAndWait(
+        Action launch,
+        Func<bool> isRunning,
+        string timeoutMessage)
+    {
+        try
+        {
+            launch();
+        }
+        catch
+        {
+            // Adobe can start its process before the COM server finishes registration.
+        }
+        Retry(isRunning, running => running, timeoutMessage);
     }
 
     internal static string BuildPhotoshopScript(string outputPath)
