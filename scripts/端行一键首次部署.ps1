@@ -19,18 +19,20 @@ $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $environmentScript = Join-Path $PSScriptRoot '检查端行作图环境.ps1'
 $repairScript = Join-Path $PSScriptRoot '修复Adobe自动控制.ps1'
 $installScript = Join-Path $PSScriptRoot '安装端行作图助手.ps1'
+$toolListScript = Join-Path $PSScriptRoot '验证端行MCP工具.ps1'
 $workflowScript = Join-Path $PSScriptRoot '运行端行完整流程自检.ps1'
 $requiredScripts = @(
     $environmentScript,
     $repairScript,
     $installScript,
+    $toolListScript,
     $workflowScript
 )
 
 Write-Host ''
 Write-Host '端行 Codex 作图助手一键首次部署' -ForegroundColor Cyan
 Write-Host '===============================' -ForegroundColor Cyan
-Write-Host '将自动执行：环境检查 → 插件安装/更新 → Adobe 与完整作图流程自检。'
+Write-Host '将自动执行：环境检查 → 插件安装/更新 → Codex 工具检查 → Adobe 与完整作图流程自检。'
 
 foreach ($script in $requiredScripts) {
     if (-not (Test-Path -LiteralPath $script -PathType Leaf)) {
@@ -46,7 +48,7 @@ if ($DryRun) {
 }
 
 Write-Host ''
-Write-Host '第 1/3 步：检查电脑环境'
+Write-Host '第 1/4 步：检查电脑环境'
 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $environmentScript
 $environmentExitCode = $LASTEXITCODE
 if ($environmentExitCode -ne 0) {
@@ -60,14 +62,21 @@ if ($environmentExitCode -ne 0) {
 }
 
 Write-Host ''
-Write-Host '第 2/3 步：安装或更新端行作图助手'
+Write-Host '第 2/4 步：安装或更新端行作图助手'
 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $installScript -SkipEnvironmentCheck
 if ($LASTEXITCODE -ne 0) {
     throw '插件安装或更新没有完成。'
 }
 
 Write-Host ''
-Write-Host '第 3/3 步：运行 Adobe 和完整业务流程自检'
+Write-Host '第 3/4 步：检查 Codex 能否读取中文作图工具'
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $toolListScript
+if ($LASTEXITCODE -ne 0) {
+    throw 'Codex 工具列表检查没有通过。'
+}
+
+Write-Host ''
+Write-Host '第 4/4 步：运行 Adobe 和完整业务流程自检'
 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $workflowScript
 if ($LASTEXITCODE -ne 0) {
     throw '完整作图流程自检没有通过。'

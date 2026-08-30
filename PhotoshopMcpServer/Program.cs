@@ -71,6 +71,7 @@ if (args.Length > 0 && args[0] == "--workflow-self-test")
 
 var builder = Host.CreateApplicationBuilder(args);
 
+builder.Logging.ClearProviders();
 builder.Logging.AddConsole(consoleLogOptions =>
 {
     consoleLogOptions.LogToStandardErrorThreshold = LogLevel.Trace;
@@ -88,6 +89,15 @@ var includeDeveloperTools = string.Equals(
     Environment.GetEnvironmentVariable("DUANXING_ALLOW_ARBITRARY_SCRIPTS"),
     "true",
     StringComparison.OrdinalIgnoreCase);
-mcpBuilder.WithTools(DuanxingToolCatalog.GetToolTypes(includeDeveloperTools));
+mcpBuilder
+    .WithTools<EnvironmentTools>()
+    .WithTools<DuanxingWorkflowTools>()
+    .WithTools<DuanxingQuickActionTools>()
+    .WithTools<PhotoshopProductionTools>()
+    .WithTools<IllustratorProductionTools>();
+if (includeDeveloperTools)
+    mcpBuilder
+        .WithTools<PhotoshopTools>()
+        .WithTools<IllustratorTools>();
 
 await builder.Build().RunAsync();
