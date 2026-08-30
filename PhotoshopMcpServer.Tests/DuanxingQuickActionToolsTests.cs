@@ -16,6 +16,37 @@ public class DuanxingQuickActionToolsTests : IDisposable
         Guid.NewGuid().ToString("N"));
 
     [Fact]
+    public void StartAndRun_CreatesProtectedTaskAndRunsCheckInOneCall()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var source = Path.Combine(_testRoot, "木纹.png");
+        File.WriteAllText(source, "original");
+        var service = CreateService();
+        var photoshop = new Mock<IPhotoshopService>();
+        photoshop
+            .Setup(item => item.ExecuteJavaScriptWithResult(It.IsAny<string>()))
+            .Returns(new PhotoshopScriptResult(true, "ok", string.Empty));
+        var tools = new DuanxingQuickActionTools(service, photoshop.Object);
+
+        var json = tools.开始并生成检查版(source, 200, 100, 2540, "张三");
+
+        using var document = JsonDocument.Parse(json);
+        document.RootElement.GetProperty("成功").GetBoolean().Should().BeTrue();
+        document.RootElement.GetProperty("已完成").GetString()
+            .Should().Contain("检查版已经生成");
+        var task = service.FindMostRecentTask();
+        task.SourceFile.Should().Be(Path.GetFullPath(source));
+        task.WidthMillimeters.Should().Be(200);
+        task.HeightMillimeters.Should().Be(100);
+        task.Dpi.Should().Be(2540);
+        task.Reviewer.Should().Be("张三");
+        File.ReadAllText(source).Should().Be("original");
+        photoshop.Verify(
+            item => item.ExecuteJavaScriptWithResult(It.IsAny<string>()),
+            Times.Once);
+    }
+
+    [Fact]
     public void ContinueWithoutHistory_ReturnsOneChineseStartInstruction()
     {
         var service = CreateService();

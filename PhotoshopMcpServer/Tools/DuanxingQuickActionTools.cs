@@ -10,6 +10,54 @@ public class DuanxingQuickActionTools(
     ITaskWorkspaceService taskWorkspaceService,
     IPhotoshopService photoshopService)
 {
+    [McpServerTool(Name = "duanxing_start_and_run")]
+    [Description(
+        "一键开始端行作图：保护客户原图、建立中文任务、生成工艺检查版和复核预览。" +
+        "客户只需提供原图、成品宽高、印刷精度和复核人；默认平铺并输出 TIFF。")]
+    public string 开始并生成检查版(
+        [Description("客户拖入 Codex 的原图完整位置。")]
+        string 原图路径,
+        [Description("成品宽度，单位毫米，不能猜测。")]
+        double 成品宽度毫米,
+        [Description("成品高度，单位毫米，不能猜测。")]
+        double 成品高度毫米,
+        [Description("印刷精度，常用数值为 1270、2540 或 5080，不能猜测。")]
+        int 印刷精度,
+        [Description("最终查看效果并确认是否可以生产的人员姓名。")]
+        string 复核人,
+        [Description("默认平铺；也可填写不拼接或 1/2 错位。")]
+        string 拼接方式 = "平铺",
+        [Description("默认 TIFF；需要可编辑图层时可填写 PSD 或 PSB。")]
+        string 输出格式 = "TIFF")
+    {
+        try
+        {
+            var fullSourcePath = Path.GetFullPath(原图路径);
+            var sourceDirectory = Path.GetDirectoryName(fullSourcePath)
+                ?? throw new InvalidOperationException("无法确定原图所在目录。");
+            var task = taskWorkspaceService.PrepareTask(new Models.DuanxingTaskRequest(
+                fullSourcePath,
+                Path.Combine(sourceDirectory, "端行作图输出"),
+                $"{Path.GetFileNameWithoutExtension(fullSourcePath)}_{拼接方式}",
+                成品宽度毫米,
+                成品高度毫米,
+                印刷精度,
+                拼接方式,
+                输出格式,
+                复核人));
+            var taskDirectory = Directory.GetParent(task.OutputDirectory)?.FullName
+                ?? throw new InvalidOperationException("无法确定新任务目录。");
+            var productionTools = new PhotoshopProductionTools(
+                photoshopService,
+                taskWorkspaceService);
+            return CreateCheckAndPreview(productionTools, taskDirectory);
+        }
+        catch (Exception exception)
+        {
+            return SerializeResult(false, "任务没有开始", exception.Message);
+        }
+    }
+
     [McpServerTool(Name = "duanxing_continue_and_run")]
     [Description(
         "一键继续最近的端行任务：等待处理时生成检查版和预览，等待复核时重新显示预览，" +
