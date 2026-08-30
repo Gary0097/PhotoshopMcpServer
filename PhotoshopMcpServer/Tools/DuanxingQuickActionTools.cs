@@ -58,6 +58,37 @@ public class DuanxingQuickActionTools(
         }
     }
 
+    [McpServerTool(Name = "duanxing_start_like_recent_and_run")]
+    [Description(
+        "把客户刚拖入的新图照最近任务规格一键处理：自动沿用成品宽高、印刷精度、" +
+        "拼接方式、输出格式和复核人，并完成原图保护、任务建立、检查版和预览。")]
+    public string 照上次规格开始并生成(
+        [Description("客户刚拖入 Codex 的新原图完整位置。")]
+        string 原图路径,
+        [Description("复核人变化时填写；留空则沿用最近任务的复核人。")]
+        string 复核人 = "")
+    {
+        try
+        {
+            var recent = taskWorkspaceService.FindMostRecentTask();
+            var effectiveReviewer = string.IsNullOrWhiteSpace(复核人)
+                ? recent.Reviewer
+                : 复核人.Trim();
+            return 开始并生成检查版(
+                原图路径,
+                recent.WidthMillimeters,
+                recent.HeightMillimeters,
+                recent.Dpi,
+                effectiveReviewer,
+                recent.TilingMode,
+                recent.OutputFormat);
+        }
+        catch (Exception exception)
+        {
+            return SerializeResult(false, "新任务没有开始", exception.Message);
+        }
+    }
+
     [McpServerTool(Name = "duanxing_show_latest_result")]
     [Description("显示最近端行任务的复核预览。客户只需说“给我看结果”，不需要提供任务目录或文件位置。")]
     public string 查看最近结果()

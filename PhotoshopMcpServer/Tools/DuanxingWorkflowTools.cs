@@ -67,10 +67,6 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
         }
     }
 
-    [McpServerTool(Name = "duanxing_prepare_task_simple")]
-    [Description(
-        "极简开始端行作图：客户只需拖入原图，并用中文提供成品宽高、印刷精度和复核人。" +
-        "自动使用原图旁边的“端行作图输出”目录、自动生成中文任务名，并采用安全的生产默认值。")]
     public string 极简开始作图(
         [Description("原图完整路径；也可以是客户刚拖入 Codex 的图片路径。")]
         string 原图路径,
@@ -115,10 +111,6 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
         }
     }
 
-    [McpServerTool(Name = "duanxing_prepare_like_recent")]
-    [Description(
-        "把客户刚拖入的新原图按最近任务的成品尺寸、印刷精度、拼接方式和输出格式建立新任务。" +
-        "客户说“照上次规格做”“这张和上一张一样”时调用，不再重复询问已有生产参数。")]
     public string 照上次规格开始作图(
         [Description("客户刚拖入的新原图完整路径。")]
         string 原图路径,

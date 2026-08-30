@@ -47,6 +47,49 @@ public class DuanxingQuickActionToolsTests : IDisposable
     }
 
     [Fact]
+    public void StartLikeRecentAndRun_ReusesSpecificationsAndProtectsNewOriginal()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var firstSource = Path.Combine(_testRoot, "第一张.png");
+        var newSource = Path.Combine(_testRoot, "第二张.png");
+        File.WriteAllText(firstSource, "first");
+        File.WriteAllText(newSource, "second-original");
+        var service = CreateService();
+        service.PrepareTask(new DuanxingTaskRequest(
+            firstSource,
+            Path.Combine(_testRoot, "第一批"),
+            "第一张",
+            320,
+            180,
+            5080,
+            "1/2错位",
+            "PSB",
+            "张三"));
+        var photoshop = new Mock<IPhotoshopService>();
+        photoshop
+            .Setup(item => item.ExecuteJavaScriptWithResult(It.IsAny<string>()))
+            .Returns(new PhotoshopScriptResult(true, "ok", string.Empty));
+        var tools = new DuanxingQuickActionTools(service, photoshop.Object);
+
+        var json = tools.照上次规格开始并生成(newSource);
+
+        using var document = JsonDocument.Parse(json);
+        document.RootElement.GetProperty("成功").GetBoolean().Should().BeTrue();
+        var task = service.FindMostRecentTask();
+        task.SourceFile.Should().Be(Path.GetFullPath(newSource));
+        task.WidthMillimeters.Should().Be(320);
+        task.HeightMillimeters.Should().Be(180);
+        task.Dpi.Should().Be(5080);
+        task.TilingMode.Should().Be("1/2错位");
+        task.OutputFormat.Should().Be("PSB");
+        task.Reviewer.Should().Be("张三");
+        File.ReadAllText(newSource).Should().Be("second-original");
+        photoshop.Verify(
+            item => item.ExecuteJavaScriptWithResult(It.IsAny<string>()),
+            Times.Once);
+    }
+
+    [Fact]
     public void ContinueWithoutHistory_ReturnsOneChineseStartInstruction()
     {
         var service = CreateService();

@@ -1,4 +1,5 @@
 using FluentAssertions;
+using ModelContextProtocol.Server;
 using PhotoshopMcpServer.Tools;
 using Xunit;
 
@@ -27,5 +28,21 @@ public class DuanxingToolCatalogTests
 
         toolTypes.Should().Contain(typeof(PhotoshopTools));
         toolTypes.Should().Contain(typeof(IllustratorTools));
+    }
+
+    [Fact]
+    public void CustomerMode_DoesNotExposeIncompleteLegacyStartTools()
+    {
+        var exposedNames = typeof(DuanxingWorkflowTools)
+            .GetMethods()
+            .Select(method => method.GetCustomAttributes(
+                typeof(McpServerToolAttribute),
+                inherit: true).SingleOrDefault())
+            .OfType<McpServerToolAttribute>()
+            .Select(attribute => attribute.Name);
+
+        exposedNames.Should().NotContain("duanxing_prepare_task_simple");
+        exposedNames.Should().NotContain("duanxing_prepare_like_recent");
+        exposedNames.Should().Contain("duanxing_prepare_task");
     }
 }
