@@ -8,6 +8,20 @@ trap {
 }
 
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
+$skillRoot = Join-Path $repositoryRoot `
+    'plugins\duanxing-creative-automation\skills\duanxing-image-craft'
+$skillPath = Join-Path $skillRoot 'SKILL.md'
+$skillText = Get-Content -LiteralPath $skillPath -Raw -Encoding UTF8
+if ((Get-Item -LiteralPath $skillPath).Length -gt 7000) {
+    throw '端行技能入口超过 7 KB，会拖慢客户的简单口令。请把专项细节移入按需参考。'
+}
+$referenceLinks = [regex]::Matches($skillText, '\]\((references/[^)]+)\)')
+foreach ($match in $referenceLinks) {
+    $referencePath = Join-Path $skillRoot ($match.Groups[1].Value -replace '/', '\')
+    if (-not (Test-Path -LiteralPath $referencePath -PathType Leaf)) {
+        throw "端行技能引用缺失：$($match.Groups[1].Value)"
+    }
+}
 $testRoot = Join-Path ([IO.Path]::GetTempPath()) `
     ("端行中文回答-" + [Guid]::NewGuid().ToString('N'))
 $null = New-Item -ItemType Directory -Path $testRoot -Force
@@ -55,6 +69,11 @@ function Invoke-CustomerScenario(
     if ($answer.Length -gt $MaximumLength) {
         throw "【${Name}】最终回答过长，共 $($answer.Length) 个字符；上限为 $MaximumLength 字。"
     }
+    $tokenLine = Select-String -LiteralPath $traceFile -Pattern 'tokens used\s+([0-9,]+)' |
+        Select-Object -Last 1
+    if ($null -ne $tokenLine -and $tokenLine.Matches.Count -gt 0) {
+        Write-Host "【$Name】会话用量：$($tokenLine.Matches[0].Groups[1].Value) tokens"
+    }
     return $answer.Trim()
 }
 
@@ -62,6 +81,7 @@ try {
     Write-Host ''
     Write-Host '端行零培训客户中文回答验收' -ForegroundColor Cyan
     Write-Host '============================' -ForegroundColor Cyan
+    Write-Host "轻量技能入口：$((Get-Item -LiteralPath $skillPath).Length) 字节，按需参考：$($referenceLinks.Count) 份。"
     Write-Host '将启动三个互相隔离的新 Codex 会话，只检查客户最终看到的中文回答。'
 
     $helpAnswer = Invoke-CustomerScenario `
