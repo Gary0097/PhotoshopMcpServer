@@ -34,12 +34,11 @@ public static partial class CustomerErrorFormatter
     {
         try
         {
-            var logDirectory = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "端行作图助手");
+            var logPath = GetTechnicalLogPath();
+            var logDirectory = Path.GetDirectoryName(logPath)!;
             Directory.CreateDirectory(logDirectory);
             File.AppendAllText(
-                Path.Combine(logDirectory, "技术错误.log"),
+                logPath,
                 $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {detail}{Environment.NewLine}",
                 new UTF8Encoding(false));
         }
@@ -47,6 +46,17 @@ public static partial class CustomerErrorFormatter
         {
             // 错误日志不能覆盖原本的客户提示。
         }
+    }
+
+    internal static string GetTechnicalLogPath()
+    {
+        var overriddenPath = Environment.GetEnvironmentVariable("DUANXING_TECHNICAL_LOG_PATH");
+        if (!string.IsNullOrWhiteSpace(overriddenPath))
+            return Path.GetFullPath(overriddenPath);
+        return Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "端行作图助手",
+            "技术错误.log");
     }
 
     private const string GenericMessage =

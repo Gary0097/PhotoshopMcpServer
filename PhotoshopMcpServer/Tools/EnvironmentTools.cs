@@ -64,6 +64,32 @@ public class EnvironmentTools(
         return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
     }
 
+    [McpServerTool(Name = "duanxing_generate_support_report", Title = "生成中文故障报告")]
+    [Description("客户说“还是不行”或“帮我排查”时使用。自动把环境状态和最近错误整理成桌面上的中文脱敏报告。")]
+    public string GenerateSupportReport()
+    {
+        try
+        {
+            var reportPath = SupportReportService.Create(CheckDuanxingEnvironment());
+            return JsonSerializer.Serialize(new Dictionary<string, object>
+            {
+                ["成功"] = true,
+                ["已完成"] = "故障报告已经生成到桌面。",
+                ["报告文件"] = reportPath,
+                ["下一步"] = "把桌面上的“端行作图故障报告.txt”发给实施人员。"
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception exception)
+        {
+            return JsonSerializer.Serialize(new Dictionary<string, object>
+            {
+                ["成功"] = false,
+                ["提示"] = CustomerErrorFormatter.Format(exception),
+                ["下一步"] = "请把当前画面发给实施人员。"
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+    }
+
     private static bool IsPhotoshopTypeLibraryReady()
     {
         try

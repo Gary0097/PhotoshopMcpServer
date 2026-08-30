@@ -28,6 +28,9 @@ $protocolTestLocalAppData = Join-Path ([IO.Path]::GetTempPath()) `
 $null = New-Item -ItemType Directory -Path $protocolTestLocalAppData -Force
 $startInfo.Environment['DUANXING_RECENT_TASKS_FILE'] = Join-Path `
     $protocolTestLocalAppData '最近任务.json'
+$startInfo.Environment['DUANXING_SUPPORT_REPORT_DIRECTORY'] = $protocolTestLocalAppData
+$startInfo.Environment['DUANXING_TECHNICAL_LOG_PATH'] = Join-Path `
+    $protocolTestLocalAppData '技术错误.log'
 $process = [Diagnostics.Process]::new()
 $process.StartInfo = $startInfo
 $null = $process.Start()
@@ -95,6 +98,7 @@ try {
         'duanxing_reject_latest_result',
         'duanxing_export_latest_approved'
         'duanxing_trace_wave_reference'
+        'duanxing_generate_support_report'
     )
     $forbidden = @(
         'photoshop_execute_script',
@@ -228,6 +232,28 @@ try {
         $customerErrorText -match '[A-Za-z]:\\|HRESULT|Exception| at ') {
         throw '客户错误提示泄露了英文技术信息或本地路径。'
     }
+    Send-ProtocolMessage @{
+        jsonrpc = '2.0'
+        id = 6
+        method = 'tools/call'
+        params = @{
+            name = 'duanxing_generate_support_report'
+            arguments = @{}
+        }
+    }
+    $reportResponse = $process.StandardOutput.ReadLine() | ConvertFrom-Json
+    $reportPayload = $reportResponse.result.content[0].text | ConvertFrom-Json
+    $reportPath = Join-Path $protocolTestLocalAppData '端行作图故障报告.txt'
+    if ($null -ne $reportResponse.error -or
+        $reportResponse.result.isError -eq $true -or
+        $reportPayload.成功 -ne $true -or
+        -not (Test-Path -LiteralPath $reportPath -PathType Leaf)) {
+        throw '中文故障报告无法自动生成。'
+    }
+    $reportText = Get-Content -LiteralPath $reportPath -Raw
+    if ($reportText -match '[A-Za-z]:\\|sk-[A-Za-z0-9_-]{8,}|\bat\s+[A-Za-z_]') {
+        throw '中文故障报告没有正确隐藏本地路径或技术信息。'
+    }
     Write-Host ''
     Write-Host 'Codex 工具列表检查通过。' -ForegroundColor Green
     Write-Host "客户模式工具数量：$($tools.Count)"
@@ -235,6 +261,7 @@ try {
     Write-Host '所有工具标题、说明和参数名称均为中文，三句口令帮助和首次规格引导均可正常调用。'
     Write-Host '只读检查不会多余确认，改图和导出仍保留安全确认。'
     Write-Host '失败场景只返回中文处理提示，不泄露本地路径或英文技术异常。'
+    Write-Host '客户说“还是不行”时可一键生成桌面中文脱敏故障报告。'
     Write-Host '底层任意脚本和旧的不完整入口均未加载。'
 }
 finally {
