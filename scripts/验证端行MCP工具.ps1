@@ -20,12 +20,27 @@ $startInfo.CreateNoWindow = $true
 $startInfo.RedirectStandardInput = $true
 $startInfo.RedirectStandardOutput = $true
 $startInfo.RedirectStandardError = $true
+$protocolTestLocalAppData = Join-Path ([IO.Path]::GetTempPath()) `
+    ("端行MCP验收-" + [Guid]::NewGuid().ToString('N'))
+$null = New-Item -ItemType Directory -Path $protocolTestLocalAppData -Force
+$startInfo.Environment['DUANXING_RECENT_TASKS_FILE'] = Join-Path `
+    $protocolTestLocalAppData '最近任务.json'
 $process = [Diagnostics.Process]::new()
 $process.StartInfo = $startInfo
 $null = $process.Start()
 
 function Send-ProtocolMessage([hashtable]$message) {
     $json = $message | ConvertTo-Json -Compress -Depth 10
+    $escaped = [Text.StringBuilder]::new()
+    foreach ($character in $json.ToCharArray()) {
+        if ([int]$character -gt 127) {
+            $null = $escaped.Append(('\u{0:x4}' -f [int]$character))
+        }
+        else {
+            $null = $escaped.Append($character)
+        }
+    }
+    $json = $escaped.ToString()
     $process.StandardInput.WriteLine($json)
     $process.StandardInput.Flush()
 }
@@ -62,6 +77,7 @@ try {
     }
     $tools = @($toolResponse.result.tools)
     $required = @(
+        'duanxing_make_this_image',
         'duanxing_start_and_run',
         'duanxing_start_like_recent_and_run',
         'duanxing_continue_and_run',
@@ -120,11 +136,35 @@ try {
         $helpResponse.result.content[0].text -notmatch '端行作图只需要四步') {
         throw '中文帮助工具无法正常执行，请重新安装插件。'
     }
+    Send-ProtocolMessage @{
+        jsonrpc = '2.0'
+        id = 4
+        method = 'tools/call'
+        params = @{
+            name = 'duanxing_make_this_image'
+            arguments = @{
+                原图路径 = 'C:\端行验收\首次原图.png'
+                成品宽度毫米 = 0
+                成品高度毫米 = 0
+                印刷精度 = 0
+                复核人 = ''
+                拼接方式 = ''
+                输出格式 = ''
+            }
+        }
+    }
+    $makeResponse = $process.StandardOutput.ReadLine() | ConvertFrom-Json
+    $makePayload = $makeResponse.result.content[0].text | ConvertFrom-Json
+    if ($null -ne $makeResponse.error -or
+        $makeResponse.result.isError -eq $true -or
+        $makePayload.下一步 -notmatch '请一次告诉我') {
+        throw '做这张入口无法给首次客户提供中文引导，请重新安装插件。'
+    }
     Write-Host ''
     Write-Host 'Codex 工具列表检查通过。' -ForegroundColor Green
     Write-Host "客户模式工具数量：$($tools.Count)"
-    Write-Host '一句话开始、照上次规格、继续、查看、通过、退回和导出入口均正常。'
-    Write-Host '所有工具说明和参数名称均为中文，四步中文帮助可以正常调用。'
+    Write-Host '“做这张”、完整规格开始、照上次规格、继续、查看、通过、退回和导出入口均正常。'
+    Write-Host '所有工具说明和参数名称均为中文，四步帮助和首次规格引导均可正常调用。'
     Write-Host '底层任意脚本和旧的不完整入口均未加载。'
 }
 finally {
@@ -134,4 +174,7 @@ finally {
         $process.WaitForExit()
     }
     $process.Dispose()
+    if (Test-Path -LiteralPath $protocolTestLocalAppData) {
+        Remove-Item -LiteralPath $protocolTestLocalAppData -Recurse -Force
+    }
 }

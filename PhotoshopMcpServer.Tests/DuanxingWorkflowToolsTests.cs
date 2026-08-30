@@ -200,7 +200,8 @@ public class DuanxingWorkflowToolsTests : IDisposable
         help.Should().NotContain("文件路径");
         help.Should().NotContain("DPI");
         help.Should().NotContain("mm");
-        help.Should().Contain("精度 2540");
+        help.Should().Contain("只说“做这张”");
+        help.Should().Contain("第一次系统只会问一次生产规格");
     }
 
     public void Dispose()

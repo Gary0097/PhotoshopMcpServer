@@ -16,6 +16,68 @@ public class DuanxingQuickActionToolsTests : IDisposable
         Guid.NewGuid().ToString("N"));
 
     [Fact]
+    public void MakeThisImage_FirstUse_AsksForAllMissingProductionDetailsOnce()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var source = Path.Combine(_testRoot, "首次原图.png");
+        File.WriteAllText(source, "original");
+        var service = CreateService();
+        var photoshop = new Mock<IPhotoshopService>();
+        var tools = new DuanxingQuickActionTools(service, photoshop.Object);
+
+        var json = tools.做这张图(source);
+
+        using var document = JsonDocument.Parse(json);
+        document.RootElement.GetProperty("成功").GetBoolean().Should().BeFalse();
+        document.RootElement.GetProperty("已完成").GetString().Should().Be("还缺少首次生产规格");
+        document.RootElement.GetProperty("下一步").GetString().Should()
+            .Be("请一次告诉我：成品宽多少毫米、高多少毫米、精度是多少、谁负责复核。例：宽200，高200，精度2540，张三复核。");
+        photoshop.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public void MakeThisImage_ReusesRecentDetailsAndAllowsOneExplicitChange()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var firstSource = Path.Combine(_testRoot, "上一张.png");
+        var newSource = Path.Combine(_testRoot, "新图.png");
+        File.WriteAllText(firstSource, "first");
+        File.WriteAllText(newSource, "new-original");
+        var service = CreateService();
+        service.PrepareTask(new DuanxingTaskRequest(
+            firstSource,
+            Path.Combine(_testRoot, "上一批"),
+            "上一张",
+            320,
+            180,
+            2540,
+            "1/2错位",
+            "PSB",
+            "张三"));
+        var photoshop = new Mock<IPhotoshopService>();
+        photoshop
+            .Setup(item => item.ExecuteJavaScriptWithResult(It.IsAny<string>()))
+            .Returns(new PhotoshopScriptResult(true, "ok", string.Empty));
+        var tools = new DuanxingQuickActionTools(service, photoshop.Object);
+
+        var json = tools.做这张图(newSource, 成品宽度毫米: 400);
+
+        using var document = JsonDocument.Parse(json);
+        document.RootElement.GetProperty("成功").GetBoolean().Should().BeTrue();
+        var task = service.FindMostRecentTask();
+        task.WidthMillimeters.Should().Be(400);
+        task.HeightMillimeters.Should().Be(180);
+        task.Dpi.Should().Be(2540);
+        task.TilingMode.Should().Be("1/2错位");
+        task.OutputFormat.Should().Be("PSB");
+        task.Reviewer.Should().Be("张三");
+        File.ReadAllText(newSource).Should().Be("new-original");
+        photoshop.Verify(
+            item => item.ExecuteJavaScriptWithResult(It.IsAny<string>()),
+            Times.Once);
+    }
+
+    [Fact]
     public void StartAndRun_CreatesProtectedTaskAndRunsCheckInOneCall()
     {
         Directory.CreateDirectory(_testRoot);

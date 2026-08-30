@@ -19,16 +19,25 @@ public sealed partial class TaskWorkspaceService : ITaskWorkspaceService
         StringComparer.OrdinalIgnoreCase);
 
     public TaskWorkspaceService()
-        : this(Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "端行作图助手",
-            "最近任务.json"))
+        : this(ResolveRecentTasksFile())
     {
     }
 
     public TaskWorkspaceService(string recentTasksFile)
     {
         _recentTasksFile = Path.GetFullPath(recentTasksFile);
+    }
+
+    private static string ResolveRecentTasksFile()
+    {
+        var configuredPath = Environment.GetEnvironmentVariable(
+            "DUANXING_RECENT_TASKS_FILE");
+        return string.IsNullOrWhiteSpace(configuredPath)
+            ? Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "端行作图助手",
+                "最近任务.json")
+            : configuredPath;
     }
 
     public DuanxingTaskRecord PrepareTask(DuanxingTaskRequest request)

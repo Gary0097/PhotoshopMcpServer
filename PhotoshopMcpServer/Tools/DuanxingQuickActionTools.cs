@@ -10,6 +10,74 @@ public class DuanxingQuickActionTools(
     ITaskWorkspaceService taskWorkspaceService,
     IPhotoshopService photoshopService)
 {
+    [McpServerTool(Name = "duanxing_make_this_image")]
+    [Description(
+        "端行员工最优先使用的一句话作图入口。客户拖入原图后只说“做这张”时调用：" +
+        "有最近任务就沿用缺少的规格并直接生成检查版和预览；首次使用则一次性提示需要补充的四项生产信息。" +
+        "客户本次明确说出的参数始终优先。")]
+    public string 做这张图(
+        [Description("客户刚拖入 Codex 的原图完整位置。")]
+        string 原图路径,
+        [Description("本次明确提供的成品宽度，单位毫米；未提供时填 0。")]
+        double 成品宽度毫米 = 0,
+        [Description("本次明确提供的成品高度，单位毫米；未提供时填 0。")]
+        double 成品高度毫米 = 0,
+        [Description("本次明确提供的印刷精度；未提供时填 0。")]
+        int 印刷精度 = 0,
+        [Description("本次明确提供的复核人；未提供时留空。")]
+        string 复核人 = "",
+        [Description("本次明确提供的拼接方式；未提供时留空并沿用最近规格，首次任务默认平铺。")]
+        string 拼接方式 = "",
+        [Description("本次明确提供的输出格式；未提供时留空并沿用最近规格，首次任务默认 TIFF。")]
+        string 输出格式 = "")
+    {
+        try
+        {
+            Models.DuanxingTaskRecord recent = null;
+            try
+            {
+                recent = taskWorkspaceService.FindMostRecentTask();
+            }
+            catch (InvalidOperationException)
+            {
+                // A first-time customer has no reusable production specification yet.
+            }
+
+            if (成品宽度毫米 <= 0 && recent != null)
+                成品宽度毫米 = recent.WidthMillimeters;
+            if (成品高度毫米 <= 0 && recent != null)
+                成品高度毫米 = recent.HeightMillimeters;
+            if (印刷精度 <= 0 && recent != null)
+                印刷精度 = recent.Dpi;
+            if (string.IsNullOrWhiteSpace(复核人) && recent != null)
+                复核人 = recent.Reviewer;
+            if (string.IsNullOrWhiteSpace(拼接方式))
+                拼接方式 = recent?.TilingMode ?? "平铺";
+            if (string.IsNullOrWhiteSpace(输出格式))
+                输出格式 = recent?.OutputFormat ?? "TIFF";
+
+            if (成品宽度毫米 <= 0 || 成品高度毫米 <= 0 || 印刷精度 <= 0 ||
+                string.IsNullOrWhiteSpace(复核人))
+                return SerializeResult(
+                    false,
+                    "还缺少首次生产规格",
+                    "请一次告诉我：成品宽多少毫米、高多少毫米、精度是多少、谁负责复核。例：宽200，高200，精度2540，张三复核。");
+
+            return 开始并生成检查版(
+                原图路径,
+                成品宽度毫米,
+                成品高度毫米,
+                印刷精度,
+                复核人,
+                拼接方式,
+                输出格式);
+        }
+        catch (Exception exception)
+        {
+            return SerializeResult(false, "这张图没有开始处理", exception.Message);
+        }
+    }
+
     [McpServerTool(Name = "duanxing_start_and_run")]
     [Description(
         "一键开始端行作图：保护客户原图、建立中文任务、生成工艺检查版和复核预览。" +
