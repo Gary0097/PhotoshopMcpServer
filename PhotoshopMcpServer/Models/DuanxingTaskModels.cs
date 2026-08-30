@@ -68,3 +68,12 @@ public record DuanxingReviewSummary(
     string ReviewStatus,
     IReadOnlyList<string> ManualChecklist
 );
+
+public record DuanxingDeliveryReport(
+    string TaskId,
+    string Stage,
+    string GeneratedAt,
+    string ReportFile,
+    bool ReadyForSignOff,
+    string Status
+);

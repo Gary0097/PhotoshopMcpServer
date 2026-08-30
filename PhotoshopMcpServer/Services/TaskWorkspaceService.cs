@@ -282,6 +282,108 @@ public sealed partial class TaskWorkspaceService : ITaskWorkspaceService
             checklist);
     }
 
+    public DuanxingDeliveryReport GenerateDeliveryReport(string taskDirectory, string stage)
+    {
+        var normalizedStage = stage?.Trim() switch
+        {
+            "首次部署" => "首次部署",
+            "POC" or "概念验证" => "POC",
+            "UAT" or "用户验收" => "UAT",
+            "正式交付" or "交付" => "正式交付",
+            _ => "POC"
+        };
+        var fullTaskDirectory = Path.GetFullPath(taskDirectory);
+        var task = LoadTask(fullTaskDirectory);
+        var summary = BuildReviewSummary(fullTaskDirectory);
+        var productionDirectory = Path.Combine(fullTaskDirectory, "04_生产版");
+        var productionFiles = Directory.Exists(productionDirectory)
+            ? Directory.GetFiles(productionDirectory)
+                .OrderBy(Path.GetFileName)
+                .ToArray()
+            : [];
+        var readyForSignOff = summary.OriginalUnchanged &&
+            summary.WorkingCopyExists &&
+            summary.Approved &&
+            summary.ResultFileCount > 0 &&
+            productionFiles.Length > 0;
+        var reportDirectory = Path.Combine(fullTaskDirectory, "06_交付记录");
+        Directory.CreateDirectory(reportDirectory);
+        var reportFile = Path.Combine(
+            reportDirectory,
+            $"{normalizedStage}_交付报告_{DateTime.Now:yyyyMMdd-HHmmss}.md");
+        var builder = new StringBuilder();
+        builder.AppendLine($"# 端行{normalizedStage}交付报告");
+        builder.AppendLine();
+        builder.AppendLine($"- 任务名称：{task.TaskName}");
+        builder.AppendLine($"- 任务编号：{task.TaskId}");
+        builder.AppendLine($"- 生成时间：{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss zzz}");
+        builder.AppendLine($"- 成品规格：{task.WidthMillimeters} × {task.HeightMillimeters} mm，{task.Dpi} DPI");
+        builder.AppendLine($"- 拼接方式：{task.TilingMode}");
+        builder.AppendLine($"- 输出格式：{task.OutputFormat}");
+        builder.AppendLine($"- 指定复核人：{task.Reviewer}");
+        builder.AppendLine($"- 当前结论：{(readyForSignOff ? "材料齐全，等待双方签字" : "材料未齐全，暂不能签字")}");
+        builder.AppendLine();
+        builder.AppendLine("## 自动检查");
+        builder.AppendLine();
+        builder.AppendLine($"- 原图保护：{(summary.OriginalUnchanged ? "通过" : "未通过")}");
+        builder.AppendLine($"- 工作副本：{(summary.WorkingCopyExists ? "存在" : "缺失")}");
+        builder.AppendLine($"- 处理结果：{summary.ResultFileCount} 个");
+        builder.AppendLine($"- AI 处理记录：{summary.AiResultCount} 个");
+        builder.AppendLine($"- 人工复核：{summary.ReviewStatus}");
+        builder.AppendLine($"- 生产版：{productionFiles.Length} 个");
+        builder.AppendLine($"- 原图校验值：{task.SourceSha256}");
+        builder.AppendLine();
+        builder.AppendLine("## 文件清单");
+        builder.AppendLine();
+        AppendFile(builder, "原图", task.SourceFile, fullTaskDirectory);
+        AppendFile(builder, "工作副本", task.WorkingCopy, fullTaskDirectory);
+        if (!string.IsNullOrWhiteSpace(summary.LatestResultFile))
+            AppendFile(builder, "最新处理结果", summary.LatestResultFile, fullTaskDirectory);
+        foreach (var productionFile in productionFiles)
+            AppendFile(builder, "生产版", productionFile, fullTaskDirectory);
+        builder.AppendLine();
+        builder.AppendLine("## 人工验收项");
+        builder.AppendLine();
+        foreach (var item in summary.ManualChecklist)
+            builder.AppendLine($"- [ ] {item}");
+        builder.AppendLine("- [ ] 已对照确认样板检查整体效果");
+        builder.AppendLine("- [ ] 已确认输出文件可以正常打开");
+        builder.AppendLine();
+        builder.AppendLine("## 问题与限制");
+        builder.AppendLine();
+        builder.AppendLine("- 问题分类：无 / 程序缺陷 / 工艺参数 / AI 波动 / 样板问题 / 新增需求");
+        builder.AppendLine("- 具体说明：");
+        builder.AppendLine();
+        builder.AppendLine("## 双方确认");
+        builder.AppendLine();
+        builder.AppendLine("- 甲方验收人：________________");
+        builder.AppendLine("- 乙方实施人：________________");
+        builder.AppendLine("- 验收结论：通过 / 限制条件下通过 / 退回修改");
+        builder.AppendLine("- 日期：________________");
+        File.WriteAllText(reportFile, builder.ToString(), new UTF8Encoding(false));
+        return new DuanxingDeliveryReport(
+            task.TaskId,
+            normalizedStage,
+            DateTimeOffset.Now.ToString("O"),
+            reportFile,
+            readyForSignOff,
+            readyForSignOff ? "材料齐全，等待双方签字" : "材料未齐全，暂不能签字");
+    }
+
+    private static void AppendFile(
+        StringBuilder builder,
+        string label,
+        string filePath,
+        string taskDirectory)
+    {
+        var fullPath = Path.GetFullPath(filePath);
+        var displayPath = fullPath.StartsWith(taskDirectory, StringComparison.OrdinalIgnoreCase)
+            ? Path.GetRelativePath(taskDirectory, fullPath)
+            : fullPath;
+        var size = File.Exists(fullPath) ? new FileInfo(fullPath).Length : 0;
+        builder.AppendLine($"- {label}：{displayPath}（{size} 字节）");
+    }
+
     private static DuanxingReviewRecord LoadLatestReview(string taskDirectory)
     {
         var reviewDirectory = Path.Combine(taskDirectory, "03_复核记录");

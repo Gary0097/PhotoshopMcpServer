@@ -274,6 +274,58 @@ public class TaskWorkspaceServiceTests : IDisposable
             .WithMessage("*还没有处理结果*");
     }
 
+    [Fact]
+    public void GenerateDeliveryReport_WithCompleteEvidence_IsReadyForSignOff()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var source = Path.Combine(_testRoot, "原图.png");
+        File.WriteAllText(source, "original");
+        var service = new TaskWorkspaceService();
+        var task = service.PrepareTask(new DuanxingTaskRequest(
+            source, Path.Combine(_testRoot, "输出"), "POC样板", 200, 100, 2540,
+            "平铺", "TIFF", "张三"));
+        var taskDirectory = Directory.GetParent(task.OutputDirectory)?.FullName
+            ?? throw new InvalidOperationException("Task directory was not created.");
+        var resultFile = Path.Combine(task.OutputDirectory, "检查版.psd");
+        File.WriteAllText(resultFile, "result");
+        service.SaveReview(taskDirectory, "张三", true, "通过");
+        var productionDirectory = Path.Combine(taskDirectory, "04_生产版");
+        Directory.CreateDirectory(productionDirectory);
+        File.WriteAllText(Path.Combine(productionDirectory, "生产版.tif"), "production");
+
+        var report = service.GenerateDeliveryReport(taskDirectory, "UAT");
+
+        report.ReadyForSignOff.Should().BeTrue();
+        report.Stage.Should().Be("UAT");
+        File.Exists(report.ReportFile).Should().BeTrue();
+        var markdown = File.ReadAllText(report.ReportFile);
+        markdown.Should().Contain("# 端行UAT交付报告");
+        markdown.Should().Contain("原图保护：通过");
+        markdown.Should().Contain("材料齐全，等待双方签字");
+        markdown.Should().Contain("甲方验收人");
+        markdown.Should().Contain("生产版.tif");
+    }
+
+    [Fact]
+    public void GenerateDeliveryReport_WithoutProduction_IsNotReadyForSignOff()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var source = Path.Combine(_testRoot, "原图.jpg");
+        File.WriteAllText(source, "original");
+        var service = new TaskWorkspaceService();
+        var task = service.PrepareTask(new DuanxingTaskRequest(
+            source, Path.Combine(_testRoot, "输出"), "待完成样板", 100, 100, 1270,
+            "不拼接", "JPEG", "李四"));
+        var taskDirectory = Directory.GetParent(task.OutputDirectory)?.FullName
+            ?? throw new InvalidOperationException("Task directory was not created.");
+
+        var report = service.GenerateDeliveryReport(taskDirectory, "正式交付");
+
+        report.ReadyForSignOff.Should().BeFalse();
+        report.Status.Should().Contain("暂不能签字");
+        File.ReadAllText(report.ReportFile).Should().Contain("生产版：0 个");
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_testRoot))

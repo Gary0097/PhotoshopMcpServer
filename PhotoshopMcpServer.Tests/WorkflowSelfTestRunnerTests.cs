@@ -41,6 +41,8 @@ public class WorkflowSelfTestRunnerTests : IDisposable
         File.Exists(result.WorkingCopy).Should().BeTrue();
         File.Exists(result.ReviewFile).Should().BeTrue();
         File.Exists(result.ProductionFile).Should().BeTrue();
+        File.Exists(result.DeliveryReport).Should().BeTrue();
+        File.ReadAllText(result.DeliveryReport).Should().Contain("材料齐全，等待双方签字");
         result.ReviewStatus.Should().Be("已批准，可导出生产版");
         taskService.IsResultApproved(result.TaskDirectory, result.ReviewFile).Should().BeTrue();
     }

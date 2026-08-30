@@ -59,11 +59,15 @@ public sealed class WorkflowSelfTestRunner(
         var sourceUnchanged = CalculateSha256(sourcePath) == sourceHashBefore;
         if (!sourceUnchanged)
             throw new InvalidOperationException("完整流程自检发现原图发生变化，已经停止。");
+        var deliveryReport = taskWorkspaceService.GenerateDeliveryReport(taskDirectory, "POC");
+        if (!deliveryReport.ReadyForSignOff || !File.Exists(deliveryReport.ReportFile))
+            throw new InvalidOperationException("中文交付报告未生成或材料状态不完整。");
         var messages = new List<string>
         {
             "已建立中文任务目录并创建工作副本。",
             "已生成平铺检查版并绑定人工复核记录。",
             "已导出 TIFF 生产版。",
+            "已生成材料齐全的中文 POC 交付报告。",
             "原图 SHA256 保持不变。",
             "端行完整业务流程自检通过。"
         };
@@ -76,6 +80,7 @@ public sealed class WorkflowSelfTestRunner(
             task.WorkingCopy,
             reviewFile,
             productionFile,
+            deliveryReport.ReportFile,
             review.Status,
             messages);
     }

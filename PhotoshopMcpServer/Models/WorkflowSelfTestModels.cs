@@ -9,6 +9,7 @@ public record WorkflowSelfTestResult(
     string WorkingCopy,
     string ReviewFile,
     string ProductionFile,
+    string DeliveryReport,
     string ReviewStatus,
     IReadOnlyList<string> Messages
 );

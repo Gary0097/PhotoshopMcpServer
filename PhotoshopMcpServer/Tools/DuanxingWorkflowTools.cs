@@ -272,6 +272,40 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
         }
     }
 
+    [McpServerTool(Name = "duanxing_generate_delivery_report")]
+    [Description(
+        "一键生成端行中文 POC、UAT 或正式交付报告，自动汇总任务规格、原图保护、处理结果、AI 记录、复核和生产文件，并预留双方签字项。")]
+    public string 生成中文交付报告(
+        [Description("包含 task.json 的端行任务目录。")]
+        string 任务目录,
+        [Description("填写：首次部署、POC、UAT 或正式交付；默认 POC。")]
+        string 阶段 = "POC")
+    {
+        try
+        {
+            var report = taskWorkspaceService.GenerateDeliveryReport(任务目录, 阶段);
+            return JsonSerializer.Serialize(new
+            {
+                成功 = true,
+                报告文件 = report.ReportFile,
+                report.Stage,
+                report.Status,
+                是否可以签字 = report.ReadyForSignOff,
+                下一步 = report.ReadyForSignOff
+                    ? "请双方查看报告中的人工验收项并签字。"
+                    : "请先完成缺失的处理、复核或生产导出，再重新生成报告。"
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception exception)
+        {
+            return JsonSerializer.Serialize(new
+            {
+                成功 = false,
+                提示 = exception.Message
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+    }
+
     [McpServerTool(Name = "duanxing_get_chinese_prompts")]
     [Description("返回端行员工日常只需使用的四步中文作图菜单。用户说“帮助”“怎么用”或不知道下一步时调用。")]
     public string 获取中文作图口令()
