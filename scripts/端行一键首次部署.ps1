@@ -5,9 +5,13 @@
 $ErrorActionPreference = 'Stop'
 $OutputEncoding = [System.Text.UTF8Encoding]::new()
 trap {
+    $technicalMessage = $_.Exception.Message
+    $failureLog = Join-Path (Split-Path -Parent $PSScriptRoot) '部署故障详情.txt'
+    Add-Content -LiteralPath $failureLog -Value "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] 一键部署：$technicalMessage" -Encoding UTF8
+    $customerMessage = if ($technicalMessage -match '[\u4e00-\u9fff]') { $technicalMessage } else { '电脑返回了技术错误，请联系实施人员处理。' }
     Write-Host ''
-    Write-Host "一键部署未完成：$($_.Exception.Message)" -ForegroundColor Red
-    Write-Host '请按上方提示处理后重新双击；不明白时把本窗口拍照发给实施人员。'
+    Write-Host "一键部署未完成：$customerMessage" -ForegroundColor Red
+    Write-Host '请按上方提示处理后重新双击；仍不明白时把“部署故障详情.txt”发给实施人员。'
     exit 1
 }
 
