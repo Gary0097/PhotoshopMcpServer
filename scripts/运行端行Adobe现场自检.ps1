@@ -18,7 +18,7 @@ Write-Host '===================' -ForegroundColor Cyan
 Write-Host '本次只创建非敏感测试文件，不读取或修改客户原图。'
 
 if (-not (Test-Path -LiteralPath $serverPath -PathType Leaf)) {
-    throw '没有找到端行作图服务，请先双击“安装端行作图助手.cmd”。'
+    throw '没有找到端行作图服务，请重新运行根目录的一键安装。'
 }
 
 $resultText = & $serverPath --adobe-self-test $outputRoot | Out-String

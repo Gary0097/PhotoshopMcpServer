@@ -63,7 +63,7 @@ Write-CheckResult 'Photoshop 自动控制' $photoshopCom `
     '没有找到 Photoshop 自动控制接口。请启动一次 Photoshop 2026，仍失败时重新安装。'
 Write-CheckResult 'Photoshop 64 位控制文件' $photoshopTypeLibraryReady `
     '类型库路径有效' `
-    '类型库路径失效。请双击“修复Adobe自动控制.cmd”，然后重新检查。'
+    'Photoshop 连接文件失效。请联系实施人员，或重新运行根目录的一键安装。'
 Write-CheckResult 'Illustrator 2026 目录' $illustratorInstalled `
     $IllustratorPath `
     "没有找到：$IllustratorPath"

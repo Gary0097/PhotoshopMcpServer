@@ -20,7 +20,7 @@ Write-Host '将自动执行：Adobe 自检 → 建任务 → 平铺检查版 →
 Write-Host '全程使用自动生成的测试图，不读取或修改客户原图。'
 
 if (-not (Test-Path -LiteralPath $serverPath -PathType Leaf)) {
-    throw '没有找到端行作图服务，请先双击“安装端行作图助手.cmd”。'
+    throw '没有找到端行作图服务，请重新运行根目录的一键安装。'
 }
 
 Write-Host ''

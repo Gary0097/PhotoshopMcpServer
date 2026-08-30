@@ -1,237 +1,53 @@
-# Photoshop MCP Server
+# 端行智能作图助手
 
-## 端行中文作图插件
+这是端行科技内部使用的中文智能作图项目。员工只需要在 Codex 中拖入原图、说中文，系统会协同 Photoshop 2026、Illustrator 2026 和 AI 完成作图、复核、导出及留档。
 
-本仓库已经集成 `duanxing-creative-automation` Codex 插件。端行员工不需要学习英文命令、MCP、COM 或 Photoshop 脚本，只需在 Codex 中用中文描述任务。
+## 第一次安装
 
-日常只用四个动作：开始、继续、复核、导出。不知道下一步时直接说“下一步做什么？”。
+安装前请确认：
 
-必备条件：已购买可用的 GPT 服务，已安装并登录 Codex，已安装并激活 Photoshop 2026 与 Illustrator 2026。
+- 已购买可正常使用的 GPT 服务。
+- 已安装并登录 Codex。
+- 已安装、激活 Photoshop 2026 和 Illustrator 2026。
+- 现场网络和 VPN 可以正常使用。
 
-最简单的开始方式：
+然后：
 
-1. 完全关闭正在编辑文件的 Photoshop 和 Illustrator。
-2. 双击 `端行一键首次部署.cmd`。
-3. 看到“一键部署已经完成”后关闭旧 Codex 任务并新建任务，然后输入：
+1. 保存文件并关闭 Photoshop 和 Illustrator。
+2. 双击根目录唯一的安装入口：`【客户双击这里】首次安装端行作图助手.cmd`。
+3. 等待窗口显示“首次部署完成”。
+4. 关闭旧的 Codex 任务，打开一个新任务。
+5. 把原图拖入 Codex，直接用中文说要求。
 
-同一个安装文件可重复运行并用于后续更新；它会自动跳过已有来源并执行作图服务健康检查。
+安装文件可以重复双击；以后更新项目时，也使用同一个入口。
 
-一键部署会自动调用独立的检查、修复、安装和自检脚本。需要单独排查时仍可分别运行这些文件。
+## 日常只记四句话
 
-> 检查端行作图环境。
+| 想做什么 | 对 Codex 说 |
+|---|---|
+| 开始新图 | `开始处理这张图，成品宽 200 毫米、高 200 毫米，精度 2540，复核人张三，其他按默认。` |
+| 继续上次 | `继续这张图上次的任务。` |
+| 检查结果 | `生成复核单。` 然后回答 `通过` 或 `退回修改` |
+| 导出成品 | `直接导出生产版。` |
 
-> 开始处理这张图：成品 200×200 mm，2540 DPI，复核人张三。其他按默认，直接做检查版。
+不知道下一步时，只说：`下一步做什么？`
 
-复核时只说“通过”或“退回修改”；通过后说“直接导出生产版”，无需填写文件路径或英文格式。
+客户不需要输入文件路径、英文格式、任务编号或技术命令。系统默认保护原图，只有人工明确通过后才允许导出生产版。
 
-中文资料：
+## 中文资料
 
-- [端行客户使用手册](docs/端行客户使用手册.md)
-- [端行中文口令卡](docs/端行中文口令卡.md)
-- [端行现场交付检查表](docs/端行现场交付检查表.md)
+- [客户使用手册](docs/端行客户使用手册.md)
+- [一页中文口令卡](docs/端行中文口令卡.md)
+- [现场交付检查表](docs/端行现场交付检查表.md)
 - [产品需求文档](PRD.md)
 - [项目实施流程](IMPLEMENTATION_WORKFLOW.md)
 
-插件源码位于 `plugins/duanxing-creative-automation`。正常生产模式默认禁止任意 Photoshop JavaScript，只允许经过封装的业务级流程。
+出现问题时，把窗口中的红色中文提示拍照发给实施人员。独立检查和修复工具统一放在 `实施人员工具` 文件夹，客户日常不要运行。
 
----
+## 安全说明
 
-🌐 **Language**: **English** | [한국어](README.ko.md)
-
-A [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that enables AI assistants to control Adobe Photoshop via Windows COM automation. Built with .NET 10 and C# 14 using the official [MCP C# SDK](https://github.com/modelcontextprotocol/csharp-sdk).
-
-## Overview
-
-This MCP server exposes Photoshop automation as a set of tools that any MCP-compatible AI client (Claude Desktop, GitHub Copilot, etc.) can invoke. The primary tool is `ExecuteJavaScript`, which gives the AI full access to Photoshop's scripting engine — allowing it to flexibly decide what to do at runtime.
-
-## Requirements
-
-- **Windows** (COM automation is Windows-only)
-- **Adobe Photoshop** (any version supporting COM automation and `DoJavaScript`)
-- **[.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)** or later
-
-## Installation
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/airtaxi/PhotoshopMcpServer.git
-cd PhotoshopMcpServer
-```
-
-### 2. Build
-
-```bash
-dotnet build
-```
-
-### 3. (Optional) Publish as a self-contained executable
-
-```bash
-dotnet publish PhotoshopMcpServer/PhotoshopMcpServer.csproj -c Release -r win-x64 --self-contained
-```
-
-The executable will be in `PhotoshopMcpServer/bin/Release/net10.0-windows/win-x64/publish/`.
-
-## MCP Server Configuration
-
-### Claude Desktop
-
-Add the following to your Claude Desktop configuration file:
-
-- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
-
-#### Option A: Run from source (requires .NET SDK)
-
-```json
-{
-  "mcpServers": {
-    "photoshop": {
-      "command": "dotnet",
-      "args": ["run", "--project", "C:\\path\\to\\PhotoshopMcpServer\\PhotoshopMcpServer"]
-    }
-  }
-}
-```
-
-#### Option B: Run published executable
-
-```json
-{
-  "mcpServers": {
-    "photoshop": {
-      "command": "C:\\path\\to\\PhotoshopMcpServer.exe"
-    }
-  }
-}
-```
-
-### GitHub Copilot (VS Code)
-
-Add to your `.vscode/mcp.json` or VS Code settings:
-
-```json
-{
-  "servers": {
-    "photoshop": {
-      "command": "dotnet",
-      "args": ["run", "--project", "C:\\path\\to\\PhotoshopMcpServer\\PhotoshopMcpServer"]
-    }
-  }
-}
-```
-
-### Cursor
-
-Add to your Cursor MCP settings (`~/.cursor/mcp.json`):
-
-```json
-{
-  "mcpServers": {
-    "photoshop": {
-      "command": "dotnet",
-      "args": ["run", "--project", "C:\\path\\to\\PhotoshopMcpServer\\PhotoshopMcpServer"]
-    }
-  }
-}
-```
-
-> **Note**: Replace `C:\path\to\PhotoshopMcpServer` with the actual path where you cloned the repository.
-
-## Available Tools
-
-| Tool | Description |
-|------|-------------|
-| `ExecuteJavaScript` | **Primary tool** — execute arbitrary JavaScript in Photoshop's scripting engine |
-| `IsPhotoshopRunning` | Check if Photoshop is running and accessible |
-| `LaunchPhotoshop` | Launch Photoshop or connect to a running instance |
-| `GetPhotoshopVersion` | Get the Photoshop version string |
-| `GetActiveDocumentInfo` | Get info about the active document (name, size, color mode, resolution) |
-| `GetOpenDocuments` | List all open document names |
-| `OpenDocument` | Open an image file by path |
-| `SaveActiveDocument` | Save the current document |
-| `CreateNewDocument` | Create a new document with specified dimensions |
-| `ExportAsPng` | Export the active document as PNG |
-| `ExportAsJpeg` | Export the active document as JPEG with quality setting |
-| `GetLayerInfo` | Get a summary of all layers in the active document |
-
-### ExecuteJavaScript — The Power Tool
-
-The `ExecuteJavaScript` tool is intentionally flexible. It allows the AI to construct and execute any valid Photoshop JavaScript, giving it full control over Photoshop. Example scripts:
-
-```javascript
-// Get document name
-app.activeDocument.name
-
-// Create a new document
-app.documents.add(1920, 1080, 72, "My Canvas")
-
-// Resize the active document
-app.activeDocument.resizeImage(800, 600)
-
-// Flatten all layers
-app.activeDocument.flatten()
-
-// Apply Gaussian blur to the active layer
-app.activeDocument.activeLayer.applyGaussianBlur(5.0)
-
-// Get all layer names
-var names = [];
-for (var i = 0; i < app.activeDocument.layers.length; i++)
-    names.push(app.activeDocument.layers[i].name);
-names.join(", ");
-```
-
-## Project Structure
-
-```
-PhotoshopMcpServer/
-├── .github/
-│   └── copilot-instructions.md          # C# code style rules for Copilot
-├── PhotoshopMcpServer/
-│   ├── Program.cs                       # MCP server entry point (stdio transport)
-│   ├── Models/
-│   │   └── PhotoshopModels.cs           # Record types for results and document info
-│   ├── Services/
-│   │   ├── IPhotoshopService.cs         # Photoshop COM service interface
-│   │   └── PhotoshopService.cs          # COM automation implementation
-│   └── Tools/
-│       └── PhotoshopTools.cs            # MCP tool definitions (13 tools)
-├── PhotoshopMcpServer.Tests/
-│   ├── PhotoshopToolsTests.cs           # Tool unit tests (28 tests)
-│   └── PhotoshopServiceTests.cs         # Model tests (7 tests)
-├── PhotoshopMcpServer.slnx
-├── LICENSE
-└── README.md
-```
-
-## Running Tests
-
-```bash
-dotnet test
-```
-
-## How It Works
-
-1. The MCP server starts and communicates over **stdio** (standard input/output)
-2. An AI client connects and discovers the available tools
-3. When the AI invokes a tool, the server uses **Windows COM automation** to send commands to Photoshop
-4. Photoshop executes the command (typically via `DoJavaScript`) and returns the result
-5. The result is sent back to the AI client
-
-```
-AI Client ←→ MCP (stdio) ←→ PhotoshopMcpServer ←→ COM ←→ Adobe Photoshop
-```
-
-## License
-
-This project is licensed under the [MIT License](LICENSE).
-
-## Acknowledgements
-
-- [Model Context Protocol C# SDK](https://github.com/modelcontextprotocol/csharp-sdk) — Official MCP SDK for .NET
-- [GitHub Copilot](https://github.com/features/copilot) — AI-assisted development of this project
-
-## Author
-
-**Howon Lee** ([@airtaxi](https://github.com/airtaxi))
+- 不覆盖客户原图。
+- AI 结果必须经过指定人员人工复核。
+- 复核通过后若文件再次修改，原批准自动失效。
+- 正式文件统一保存到任务的“04_生产版”目录。
+- 项目基于开源 PhotoshopMcpServer 扩展，采用 [MIT 许可证](LICENSE)。
