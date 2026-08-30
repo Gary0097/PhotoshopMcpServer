@@ -58,6 +58,100 @@ public class DuanxingQuickActionTools(
         }
     }
 
+    [McpServerTool(Name = "duanxing_show_latest_result")]
+    [Description("显示最近端行任务的复核预览。客户只需说“给我看结果”，不需要提供任务目录或文件位置。")]
+    public string 查看最近结果()
+    {
+        try
+        {
+            var taskDirectory = GetRecentTaskDirectory();
+            var productionTools = new PhotoshopProductionTools(
+                photoshopService,
+                taskWorkspaceService);
+            return ShowPreview(productionTools, taskDirectory);
+        }
+        catch (Exception exception)
+        {
+            return SerializeResult(false, "没有显示结果", exception.Message);
+        }
+    }
+
+    [McpServerTool(Name = "duanxing_approve_latest_result")]
+    [Description(
+        "批准最近端行任务的最新处理结果。客户明确说“通过”时调用，" +
+        "自动使用任务中登记的复核人并绑定当前文件校验值。")]
+    public string 批准最近结果()
+    {
+        try
+        {
+            var task = taskWorkspaceService.FindMostRecentTask();
+            var taskDirectory = GetTaskDirectory(task);
+            taskWorkspaceService.SaveReview(
+                taskDirectory,
+                task.Reviewer,
+                true,
+                "客户确认通过");
+            return SerializeResult(
+                true,
+                "最新结果已复核通过",
+                "说“直接导出生产版”。");
+        }
+        catch (Exception exception)
+        {
+            return SerializeResult(false, "没有保存通过结论", exception.Message);
+        }
+    }
+
+    [McpServerTool(Name = "duanxing_reject_latest_result")]
+    [Description(
+        "退回最近端行任务的最新处理结果。客户说“退回修改”时调用，" +
+        "只需填写客户说的具体修改要求，不需要任务目录或复核人。")]
+    public string 退回最近结果(
+        [Description("客户说明的修改位置和目标效果，例如：中间竖缝太明显，请减弱。")]
+        string 修改要求)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(修改要求))
+                throw new ArgumentException("请说明哪里需要修改以及希望达到的效果。");
+            var task = taskWorkspaceService.FindMostRecentTask();
+            var taskDirectory = GetTaskDirectory(task);
+            taskWorkspaceService.SaveReview(
+                taskDirectory,
+                task.Reviewer,
+                false,
+                修改要求.Trim());
+            return SerializeResult(
+                true,
+                "最新结果已退回修改",
+                "请继续说明修改要求，或说“回到上一版”。");
+        }
+        catch (Exception exception)
+        {
+            return SerializeResult(false, "没有保存退回结论", exception.Message);
+        }
+    }
+
+    [McpServerTool(Name = "duanxing_export_latest_approved")]
+    [Description(
+        "导出最近端行任务已经批准的生产版。客户只需说“直接导出生产版”，" +
+        "系统自动使用批准文件、任务格式和生产目录。")]
+    public string 直接导出最近生产版()
+    {
+        try
+        {
+            var taskDirectory = GetRecentTaskDirectory();
+            var productionTools = new PhotoshopProductionTools(
+                photoshopService,
+                taskWorkspaceService);
+            return ExportProduction(productionTools, taskDirectory);
+        }
+        catch (Exception exception)
+        {
+            return SerializeResult(false, "生产版没有导出", exception.Message);
+        }
+    }
+
     [McpServerTool(Name = "duanxing_continue_and_run")]
     [Description(
         "一键继续最近的端行任务：等待处理时生成检查版和预览，等待复核时重新显示预览，" +
@@ -163,6 +257,13 @@ public class DuanxingQuickActionTools(
         => result.Contains("失败", StringComparison.Ordinal) ||
             result.StartsWith("无法", StringComparison.Ordinal) ||
             result.StartsWith("还没有", StringComparison.Ordinal);
+
+    private string GetRecentTaskDirectory()
+        => GetTaskDirectory(taskWorkspaceService.FindMostRecentTask());
+
+    private static string GetTaskDirectory(Models.DuanxingTaskRecord task)
+        => Directory.GetParent(task.OutputDirectory)?.FullName
+            ?? throw new InvalidOperationException("无法确定最近任务目录。");
 
     private static string SerializeResult(
         bool succeeded,

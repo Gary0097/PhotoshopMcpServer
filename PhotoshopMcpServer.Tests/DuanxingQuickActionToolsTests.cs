@@ -62,6 +62,69 @@ public class DuanxingQuickActionToolsTests : IDisposable
     }
 
     [Fact]
+    public void ApproveLatestResult_NeedsNoTaskPathOrReviewer()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var source = Path.Combine(_testRoot, "木纹.png");
+        File.WriteAllText(source, "original");
+        var service = CreateService();
+        var task = service.PrepareTask(new DuanxingTaskRequest(
+            source,
+            Path.Combine(_testRoot, "输出"),
+            "木纹复核",
+            100,
+            100,
+            1270,
+            "平铺",
+            "TIFF",
+            "张三"));
+        File.WriteAllText(Path.Combine(task.OutputDirectory, "检查版.psd"), "result");
+        var photoshop = new Mock<IPhotoshopService>();
+        var tools = new DuanxingQuickActionTools(service, photoshop.Object);
+
+        var json = tools.批准最近结果();
+
+        using var document = JsonDocument.Parse(json);
+        document.RootElement.GetProperty("成功").GetBoolean().Should().BeTrue();
+        document.RootElement.GetProperty("已完成").GetString().Should().Contain("复核通过");
+        var taskDirectory = Directory.GetParent(task.OutputDirectory)?.FullName;
+        var review = service.BuildReviewSummary(taskDirectory);
+        review.Approved.Should().BeTrue();
+        review.ReviewStatus.Should().Be("已批准，可导出生产版");
+        photoshop.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public void RejectLatestResult_SavesCustomerInstructionWithoutTaskPath()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var source = Path.Combine(_testRoot, "木纹.png");
+        File.WriteAllText(source, "original");
+        var service = CreateService();
+        var task = service.PrepareTask(new DuanxingTaskRequest(
+            source,
+            Path.Combine(_testRoot, "输出"),
+            "木纹复核",
+            100,
+            100,
+            1270,
+            "平铺",
+            "TIFF",
+            "张三"));
+        File.WriteAllText(Path.Combine(task.OutputDirectory, "检查版.psd"), "result");
+        var photoshop = new Mock<IPhotoshopService>();
+        var tools = new DuanxingQuickActionTools(service, photoshop.Object);
+
+        var json = tools.退回最近结果("中间竖缝太明显，请减弱");
+
+        using var document = JsonDocument.Parse(json);
+        document.RootElement.GetProperty("成功").GetBoolean().Should().BeTrue();
+        var taskDirectory = Directory.GetParent(task.OutputDirectory)?.FullName;
+        service.BuildTaskProgress(taskDirectory).Status.Should().Be("已退回，等待修改");
+        photoshop.VerifyNoOtherCalls();
+    }
+
+    [Fact]
     public void ContinueApprovedTask_ExportsWithoutAskingForPathAgain()
     {
         Directory.CreateDirectory(_testRoot);
@@ -94,6 +157,45 @@ public class DuanxingQuickActionToolsTests : IDisposable
         document.RootElement.GetProperty("成功").GetBoolean().Should().BeTrue();
         document.RootElement.GetProperty("已完成").GetString().Should().Be("生产版已经导出");
         document.RootElement.GetProperty("下一步").GetString().Should().Contain("生成中文交付报告");
+        photoshop.Verify(
+            item => item.ExecuteJavaScriptWithResult(It.IsAny<string>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public void DirectExportLatestApproved_NeedsNoTaskOrFilePath()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var source = Path.Combine(_testRoot, "木纹.png");
+        File.WriteAllText(source, "original");
+        var service = CreateService();
+        var task = service.PrepareTask(new DuanxingTaskRequest(
+            source,
+            Path.Combine(_testRoot, "输出"),
+            "木纹生产",
+            100,
+            100,
+            1270,
+            "平铺",
+            "TIFF",
+            "张三"));
+        File.WriteAllText(Path.Combine(task.OutputDirectory, "已确认结果.psd"), "approved");
+        service.SaveReview(
+            Directory.GetParent(task.OutputDirectory)?.FullName,
+            "张三",
+            true,
+            "通过");
+        var photoshop = new Mock<IPhotoshopService>();
+        photoshop
+            .Setup(item => item.ExecuteJavaScriptWithResult(It.IsAny<string>()))
+            .Returns(new PhotoshopScriptResult(true, "ok", string.Empty));
+        var tools = new DuanxingQuickActionTools(service, photoshop.Object);
+
+        var json = tools.直接导出最近生产版();
+
+        using var document = JsonDocument.Parse(json);
+        document.RootElement.GetProperty("成功").GetBoolean().Should().BeTrue();
+        document.RootElement.GetProperty("已完成").GetString().Should().Be("生产版已经导出");
         photoshop.Verify(
             item => item.ExecuteJavaScriptWithResult(It.IsAny<string>()),
             Times.Once);
