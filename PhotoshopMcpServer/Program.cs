@@ -44,7 +44,10 @@ if (args.Length > 0 && args[0] == "--workflow-self-test")
     try
     {
         using var photoshopService = new PhotoshopService();
-        var taskWorkspaceService = new TaskWorkspaceService();
+        var selfTestRecentTasksFile = Path.Combine(
+            Path.GetFullPath(args[2]),
+            ".自检最近任务.json");
+        var taskWorkspaceService = new TaskWorkspaceService(selfTestRecentTasksFile);
         var runner = new WorkflowSelfTestRunner(photoshopService, taskWorkspaceService);
         var result = runner.Run(args[1], args[2]);
         var json = JsonSerializer.Serialize(
