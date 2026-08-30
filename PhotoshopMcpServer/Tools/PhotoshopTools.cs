@@ -30,7 +30,7 @@ public class PhotoshopTools
         _allowArbitraryScripts = allowArbitraryScripts;
     }
 
-    [McpServerTool]
+    [McpServerTool(Name = "photoshop_execute_script")]
     [Description(
         "Executes arbitrary JavaScript in Adobe Photoshop's scripting engine. " +
         "This is the primary tool for all Photoshop automation. " +
@@ -52,24 +52,22 @@ public class PhotoshopTools
         string script)
     {
         if (!_allowArbitraryScripts)
-            return "Error: Arbitrary Photoshop scripts are disabled in production mode. " +
-                "Use an approved business-level tool or set DUANXING_ALLOW_ARBITRARY_SCRIPTS=true " +
-                "for an authorized development session.";
+            return "生产模式已关闭任意脚本。请使用端行中文作图流程；需要调试时联系实施人员。";
 
         var result = _photoshopService.ExecuteJavaScriptWithResult(script);
         if (!result.Success)
-            return $"Error: {result.ErrorMessage}";
+            return $"执行失败：{result.ErrorMessage}";
         return result.Result;
     }
 
-    [McpServerTool]
+    [McpServerTool(Name = "photoshop_is_running")]
     [Description(
         "Checks whether Adobe Photoshop is currently running and accessible via COM. " +
         "Returns 'true' if Photoshop is running, 'false' otherwise.")]
     public string IsPhotoshopRunning()
         => _photoshopService.IsPhotoshopRunning().ToString().ToLowerInvariant();
 
-    [McpServerTool]
+    [McpServerTool(Name = "photoshop_launch")]
     [Description(
         "Launches Adobe Photoshop if it is not already running, " +
         "or connects to the running instance. " +
@@ -79,15 +77,15 @@ public class PhotoshopTools
         try
         {
             _photoshopService.LaunchPhotoshop();
-            return "Photoshop launched and connected successfully.";
+            return "Photoshop 已启动并连接成功。";
         }
         catch (Exception exception)
         {
-            return $"Failed to launch Photoshop: {exception.Message}";
+            return $"Photoshop 启动失败：{exception.Message}";
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Name = "photoshop_get_version")]
     [Description(
         "Gets the version string of the running Adobe Photoshop instance. " +
         "Useful for verifying connectivity and checking Photoshop version compatibility.")]
@@ -99,11 +97,11 @@ public class PhotoshopTools
         }
         catch (Exception exception)
         {
-            return $"Error: {exception.Message}";
+            return $"读取 Photoshop 版本失败：{exception.Message}";
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Name = "photoshop_get_active_document")]
     [Description(
         "Gets information about the currently active (frontmost) Photoshop document. " +
         "Returns document name, file path, dimensions, color mode, and resolution. " +
@@ -114,19 +112,19 @@ public class PhotoshopTools
         {
             var documentInfo = _photoshopService.GetActiveDocumentInfo();
             return
-                $"Name: {documentInfo.Name}\n" +
-                $"Path: {documentInfo.FilePath}\n" +
-                $"Size: {documentInfo.Width} x {documentInfo.Height} px\n" +
-                $"Color Mode: {documentInfo.ColorMode}\n" +
-                $"Resolution: {documentInfo.Resolution} ppi";
+                $"文件名称：{documentInfo.Name}\n" +
+                $"文件位置：{documentInfo.FilePath}\n" +
+                $"像素尺寸：{documentInfo.Width} × {documentInfo.Height}\n" +
+                $"颜色模式：{documentInfo.ColorMode}\n" +
+                $"图像精度：{documentInfo.Resolution}";
         }
         catch (Exception exception)
         {
-            return $"Error: {exception.Message}";
+            return $"读取当前文档失败：{exception.Message}";
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Name = "photoshop_get_open_documents")]
     [Description(
         "Gets a list of all currently open Photoshop document names. " +
         "Returns a comma-separated list of document names, or 'No documents open' if none.")]
@@ -136,16 +134,16 @@ public class PhotoshopTools
         {
             var documentNames = _photoshopService.GetOpenDocumentNames();
             if (documentNames.Count == 0)
-                return "No documents open.";
+                return "当前没有打开的文档。";
             return string.Join(", ", documentNames);
         }
         catch (Exception exception)
         {
-            return $"Error: {exception.Message}";
+            return $"读取文档列表失败：{exception.Message}";
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Name = "photoshop_open_document")]
     [Description(
         "Opens an image file in Photoshop. " +
         "Provide the full absolute path to the image file. " +
@@ -154,27 +152,33 @@ public class PhotoshopTools
         [Description("The full absolute path to the image file to open. Example: C:\\Images\\photo.jpg")]
         string filePath)
     {
+        if (!_allowArbitraryScripts)
+            return ProductionWriteBlocked();
+
         var script = $"app.open(new File(\"{filePath.Replace("\\", "/")}\"));";
         var result = _photoshopService.ExecuteJavaScriptWithResult(script);
         if (!result.Success)
-            return $"Failed to open file: {result.ErrorMessage}";
-        return $"Opened: {filePath}";
+            return $"打开文件失败：{result.ErrorMessage}";
+        return $"已打开：{filePath}";
     }
 
-    [McpServerTool]
+    [McpServerTool(Name = "photoshop_save_active_document")]
     [Description(
         "Saves the currently active Photoshop document in its current format. " +
         "For PSD files, saves as PSD. " +
         "Use ExecuteJavaScript for advanced save options (Save As, Export, etc.).")]
     public string SaveActiveDocument()
     {
+        if (!_allowArbitraryScripts)
+            return ProductionWriteBlocked();
+
         var result = _photoshopService.ExecuteJavaScriptWithResult("app.activeDocument.save();");
         if (!result.Success)
-            return $"Failed to save document: {result.ErrorMessage}";
-        return "Document saved successfully.";
+            return $"保存文档失败：{result.ErrorMessage}";
+        return "文档保存成功。";
     }
 
-    [McpServerTool]
+    [McpServerTool(Name = "photoshop_create_document")]
     [Description(
         "Creates a new Photoshop document with the specified dimensions. " +
         "Returns confirmation with the document name.")]
@@ -188,15 +192,18 @@ public class PhotoshopTools
         [Description("Name for the new document.")]
         string documentName)
     {
+        if (!_allowArbitraryScripts)
+            return ProductionWriteBlocked();
+
         var script =
             $"var doc = app.documents.add({width}, {height}, {resolution}, \"{documentName}\"); doc.name;";
         var result = _photoshopService.ExecuteJavaScriptWithResult(script);
         if (!result.Success)
-            return $"Failed to create document: {result.ErrorMessage}";
-        return $"Created document '{documentName}' ({width}x{height} px, {resolution} ppi).";
+            return $"创建文档失败：{result.ErrorMessage}";
+        return $"已创建文档“{documentName}”，像素尺寸 {width} × {height}，图像精度 {resolution}。";
     }
 
-    [McpServerTool]
+    [McpServerTool(Name = "photoshop_export_png")]
     [Description(
         "Exports the active Photoshop document as a PNG file to the specified path. " +
         "Uses Save for Web with PNG-24 settings (lossless, supports transparency).")]
@@ -204,6 +211,9 @@ public class PhotoshopTools
         [Description("The full absolute path where the PNG file should be saved. Example: C:\\Output\\result.png")]
         string outputPath)
     {
+        if (!_allowArbitraryScripts)
+            return ProductionWriteBlocked();
+
         var normalizedPath = outputPath.Replace("\\", "/");
         var script =
             $"var exportOptions = new ExportOptionsSaveForWeb();" +
@@ -214,11 +224,11 @@ public class PhotoshopTools
             $"\"{outputPath}\"";
         var result = _photoshopService.ExecuteJavaScriptWithResult(script);
         if (!result.Success)
-            return $"Failed to export PNG: {result.ErrorMessage}";
-        return $"Exported PNG to: {outputPath}";
+            return $"导出图片失败：{result.ErrorMessage}";
+        return $"图片已导出到：{outputPath}";
     }
 
-    [McpServerTool]
+    [McpServerTool(Name = "photoshop_export_jpeg")]
     [Description(
         "Exports the active Photoshop document as a JPEG file to the specified path. " +
         "Quality ranges from 0 (lowest) to 100 (highest).")]
@@ -228,6 +238,9 @@ public class PhotoshopTools
         [Description("JPEG quality from 0 (lowest) to 100 (highest). Default is 80.")]
         int quality)
     {
+        if (!_allowArbitraryScripts)
+            return ProductionWriteBlocked();
+
         var normalizedPath = outputPath.Replace("\\", "/");
         var script =
             $"var exportOptions = new ExportOptionsSaveForWeb();" +
@@ -237,11 +250,11 @@ public class PhotoshopTools
             $"\"{outputPath}\"";
         var result = _photoshopService.ExecuteJavaScriptWithResult(script);
         if (!result.Success)
-            return $"Failed to export JPEG: {result.ErrorMessage}";
-        return $"Exported JPEG (quality={quality}) to: {outputPath}";
+            return $"导出图片失败：{result.ErrorMessage}";
+        return $"图片已导出，质量 {quality}，位置：{outputPath}";
     }
 
-    [McpServerTool]
+    [McpServerTool(Name = "photoshop_get_layers")]
     [Description(
         "Gets a JSON-like summary of all layers in the active Photoshop document. " +
         "Returns layer names, types, and visibility for up to the top-level layers.")]
@@ -259,7 +272,10 @@ public class PhotoshopTools
             "})();";
         var operationResult = _photoshopService.ExecuteJavaScriptWithResult(script);
         if (!operationResult.Success)
-            return $"Error: {operationResult.ErrorMessage}";
+            return $"读取图层失败：{operationResult.ErrorMessage}";
         return operationResult.Result;
     }
+
+    private static string ProductionWriteBlocked()
+        => "生产模式不允许使用通用写入工具。请使用端行任务流程，避免覆盖原图或绕过人工复核。";
 }

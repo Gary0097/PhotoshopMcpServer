@@ -39,7 +39,7 @@ public class PhotoshopToolsTests
 
         var result = _tools.ExecuteJavaScript(script);
 
-        result.Should().Be("Error: Script error");
+        result.Should().Be("执行失败：Script error");
     }
 
     [Fact]
@@ -49,7 +49,27 @@ public class PhotoshopToolsTests
 
         var result = productionTools.ExecuteJavaScript("app.activeDocument.flatten()");
 
-        result.Should().Contain("disabled in production mode");
+        result.Should().Contain("生产模式已关闭任意脚本");
+        _mockService.Verify(
+            service => service.ExecuteJavaScriptWithResult(It.IsAny<string>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public void GenericWriteTools_InProductionMode_AreBlocked()
+    {
+        var productionTools = new PhotoshopTools(_mockService.Object);
+
+        var results = new[]
+        {
+            productionTools.OpenDocument(@"C:\Images\source.png"),
+            productionTools.SaveActiveDocument(),
+            productionTools.CreateNewDocument(800, 600, 72, "测试"),
+            productionTools.ExportAsPng(@"C:\Output\result.png"),
+            productionTools.ExportAsJpeg(@"C:\Output\result.jpg", 80)
+        };
+
+        results.Should().OnlyContain(result => result.Contains("生产模式不允许使用通用写入工具"));
         _mockService.Verify(
             service => service.ExecuteJavaScriptWithResult(It.IsAny<string>()),
             Times.Never);
@@ -82,7 +102,7 @@ public class PhotoshopToolsTests
 
         var result = _tools.LaunchPhotoshop();
 
-        result.Should().Be("Photoshop launched and connected successfully.");
+        result.Should().Be("Photoshop 已启动并连接成功。");
     }
 
     [Fact]
@@ -93,7 +113,7 @@ public class PhotoshopToolsTests
 
         var result = _tools.LaunchPhotoshop();
 
-        result.Should().StartWith("Failed to launch Photoshop:");
+        result.Should().StartWith("Photoshop 启动失败：");
         result.Should().Contain("Photoshop not found");
     }
 
@@ -115,7 +135,7 @@ public class PhotoshopToolsTests
 
         var result = _tools.GetPhotoshopVersion();
 
-        result.Should().Be("Error: COM error");
+        result.Should().Be("读取 Photoshop 版本失败：COM error");
     }
 
     [Fact]
@@ -134,7 +154,7 @@ public class PhotoshopToolsTests
         var result = _tools.GetActiveDocumentInfo();
 
         result.Should().Contain("photo.psd");
-        result.Should().Contain("1920 x 1080 px");
+        result.Should().Contain("1920 × 1080");
         result.Should().Contain("RGBColor");
         result.Should().Contain("72");
     }
@@ -147,7 +167,7 @@ public class PhotoshopToolsTests
 
         var result = _tools.GetActiveDocumentInfo();
 
-        result.Should().Be("Error: No active document");
+        result.Should().Be("读取当前文档失败：No active document");
     }
 
     [Fact]
@@ -169,7 +189,7 @@ public class PhotoshopToolsTests
 
         var result = _tools.GetOpenDocuments();
 
-        result.Should().Be("No documents open.");
+        result.Should().Be("当前没有打开的文档。");
     }
 
     [Fact]
@@ -180,7 +200,7 @@ public class PhotoshopToolsTests
 
         var result = _tools.GetOpenDocuments();
 
-        result.Should().Be("Error: COM disconnected");
+        result.Should().Be("读取文档列表失败：COM disconnected");
     }
 
     [Fact]
@@ -192,7 +212,7 @@ public class PhotoshopToolsTests
 
         var result = _tools.OpenDocument(filePath);
 
-        result.Should().Be($"Opened: {filePath}");
+        result.Should().Be($"已打开：{filePath}");
     }
 
     [Fact]
@@ -204,7 +224,7 @@ public class PhotoshopToolsTests
 
         var result = _tools.OpenDocument(filePath);
 
-        result.Should().StartWith("Failed to open file:");
+        result.Should().StartWith("打开文件失败：");
         result.Should().Contain("File not found");
     }
 
@@ -216,7 +236,7 @@ public class PhotoshopToolsTests
 
         var result = _tools.SaveActiveDocument();
 
-        result.Should().Be("Document saved successfully.");
+        result.Should().Be("文档保存成功。");
     }
 
     [Fact]
@@ -227,7 +247,7 @@ public class PhotoshopToolsTests
 
         var result = _tools.SaveActiveDocument();
 
-        result.Should().StartWith("Failed to save document:");
+        result.Should().StartWith("保存文档失败：");
     }
 
     [Fact]
@@ -252,7 +272,7 @@ public class PhotoshopToolsTests
 
         var result = _tools.CreateNewDocument(800, 600, 72.0, "TestDoc");
 
-        result.Should().StartWith("Failed to create document:");
+        result.Should().StartWith("创建文档失败：");
     }
 
     [Fact]
@@ -264,7 +284,7 @@ public class PhotoshopToolsTests
 
         var result = _tools.ExportAsPng(outputPath);
 
-        result.Should().Be($"Exported PNG to: {outputPath}");
+        result.Should().Be($"图片已导出到：{outputPath}");
     }
 
     [Fact]
@@ -275,7 +295,7 @@ public class PhotoshopToolsTests
 
         var result = _tools.ExportAsPng(@"C:\Output\result.png");
 
-        result.Should().StartWith("Failed to export PNG:");
+        result.Should().StartWith("导出图片失败：");
     }
 
     [Theory]
@@ -290,7 +310,7 @@ public class PhotoshopToolsTests
 
         var result = _tools.ExportAsJpeg(outputPath, quality);
 
-        result.Should().Contain($"quality={quality}");
+        result.Should().Contain($"质量 {quality}");
         result.Should().Contain(outputPath);
     }
 
@@ -302,7 +322,7 @@ public class PhotoshopToolsTests
 
         var result = _tools.ExportAsJpeg(@"C:\Output\result.jpg", 80);
 
-        result.Should().StartWith("Failed to export JPEG:");
+        result.Should().StartWith("导出图片失败：");
     }
 
     [Fact]
@@ -326,6 +346,6 @@ public class PhotoshopToolsTests
 
         var result = _tools.GetLayerInfo();
 
-        result.Should().Be("Error: No document open");
+        result.Should().Be("读取图层失败：No document open");
     }
 }
