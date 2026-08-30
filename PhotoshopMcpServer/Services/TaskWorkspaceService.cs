@@ -9,6 +9,7 @@ namespace PhotoshopMcpServer.Services;
 public sealed partial class TaskWorkspaceService : ITaskWorkspaceService
 {
     private readonly string _recentTasksFile;
+    private readonly string _presetsFile;
 
     private static readonly HashSet<string> SupportedInputExtensions = new(
         [".psd", ".psb", ".tif", ".tiff", ".png", ".jpg", ".jpeg", ".bmp"],
@@ -26,6 +27,9 @@ public sealed partial class TaskWorkspaceService : ITaskWorkspaceService
     public TaskWorkspaceService(string recentTasksFile)
     {
         _recentTasksFile = Path.GetFullPath(recentTasksFile);
+        var stateDirectory = Path.GetDirectoryName(_recentTasksFile)
+            ?? throw new InvalidOperationException("无法确定端行状态保存目录。");
+        _presetsFile = Path.Combine(stateDirectory, "规格模板.json");
     }
 
     private static string ResolveRecentTasksFile()
@@ -123,6 +127,48 @@ public sealed partial class TaskWorkspaceService : ITaskWorkspaceService
 
         throw new InvalidOperationException("最近任务已经移动或删除，请拖入原图后说“继续这张图”。");
     }
+
+    public DuanxingProductionPreset SaveMostRecentTaskAsPreset(string presetName)
+    {
+        var normalizedName = ValidatePresetName(presetName);
+        var task = FindMostRecentTask();
+        var preset = new DuanxingProductionPreset(
+            normalizedName,
+            DateTimeOffset.Now.ToString("O"),
+            task.WidthMillimeters,
+            task.HeightMillimeters,
+            task.Dpi,
+            task.TilingMode,
+            task.OutputFormat,
+            task.Reviewer);
+        var presets = LoadProductionPresets().ToList();
+        presets.RemoveAll(item => string.Equals(
+            item.Name,
+            normalizedName,
+            StringComparison.OrdinalIgnoreCase));
+        presets.Insert(0, preset);
+        if (presets.Count > 50)
+            presets.RemoveRange(50, presets.Count - 50);
+        var directory = Path.GetDirectoryName(_presetsFile)
+            ?? throw new InvalidOperationException("无法保存规格模板。");
+        Directory.CreateDirectory(directory);
+        WriteJson(_presetsFile, presets);
+        return preset;
+    }
+
+    public DuanxingProductionPreset GetProductionPreset(string presetName)
+    {
+        var normalizedName = ValidatePresetName(presetName);
+        return LoadProductionPresets().FirstOrDefault(item => string.Equals(
+            item.Name,
+            normalizedName,
+            StringComparison.OrdinalIgnoreCase))
+            ?? throw new InvalidOperationException(
+                $"没有名为“{normalizedName}”的规格模板。请说“查看规格模板”。");
+    }
+
+    public IReadOnlyList<DuanxingProductionPreset> GetProductionPresets()
+        => LoadProductionPresets();
 
     public DuanxingReviewRecord SaveReview(
         string taskDirectory,
@@ -625,6 +671,34 @@ public sealed partial class TaskWorkspaceService : ITaskWorkspaceService
     {
         var json = JsonSerializer.Serialize(value, new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(path, json, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+    }
+
+    private IReadOnlyList<DuanxingProductionPreset> LoadProductionPresets()
+    {
+        if (!File.Exists(_presetsFile))
+            return [];
+        try
+        {
+            return JsonSerializer.Deserialize<List<DuanxingProductionPreset>>(
+                File.ReadAllText(_presetsFile)) ?? [];
+        }
+        catch (JsonException)
+        {
+            throw new InvalidOperationException(
+                "规格模板记录无法读取，请联系实施人员检查配置。");
+        }
+    }
+
+    private static string ValidatePresetName(string presetName)
+    {
+        var normalizedName = presetName?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(normalizedName))
+            throw new ArgumentException("请给规格模板起一个中文名称，例如“木纹”。");
+        if (normalizedName.Length > 30)
+            throw new ArgumentException("规格模板名称不能超过 30 个字。请使用简短名称。");
+        if (normalizedName.Any(char.IsControl))
+            throw new ArgumentException("规格模板名称不能包含换行或控制字符。");
+        return normalizedName;
     }
 
     private void RememberTask(string taskDirectory)

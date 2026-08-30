@@ -78,6 +78,76 @@ public class DuanxingQuickActionToolsTests : IDisposable
     }
 
     [Fact]
+    public void ProductionPreset_UsesNamedSpecificationsInsteadOfUnrelatedRecentTask()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var woodSource = Path.Combine(_testRoot, "木纹样板.png");
+        var fabricSource = Path.Combine(_testRoot, "布纹样板.png");
+        var newSource = Path.Combine(_testRoot, "新木纹.png");
+        File.WriteAllText(woodSource, "wood");
+        File.WriteAllText(fabricSource, "fabric");
+        File.WriteAllText(newSource, "new-wood");
+        var service = CreateService();
+        service.PrepareTask(new DuanxingTaskRequest(
+            woodSource,
+            Path.Combine(_testRoot, "木纹输出"),
+            "木纹",
+            320,
+            180,
+            2540,
+            "1/2错位",
+            "PSB",
+            "张三"));
+        var photoshop = new Mock<IPhotoshopService>();
+        photoshop
+            .Setup(item => item.ExecuteJavaScriptWithResult(It.IsAny<string>()))
+            .Returns(new PhotoshopScriptResult(true, "ok", string.Empty));
+        var tools = new DuanxingQuickActionTools(service, photoshop.Object);
+
+        using var saved = JsonDocument.Parse(tools.记住最近规格("木纹"));
+        saved.RootElement.GetProperty("成功").GetBoolean().Should().BeTrue();
+        service.PrepareTask(new DuanxingTaskRequest(
+            fabricSource,
+            Path.Combine(_testRoot, "布纹输出"),
+            "布纹",
+            100,
+            100,
+            1270,
+            "平铺",
+            "TIFF",
+            "李四"));
+
+        var json = tools.按规格模板做这张(newSource, "木纹");
+
+        using var document = JsonDocument.Parse(json);
+        document.RootElement.GetProperty("成功").GetBoolean().Should().BeTrue();
+        var task = service.FindMostRecentTask();
+        task.WidthMillimeters.Should().Be(320);
+        task.HeightMillimeters.Should().Be(180);
+        task.Dpi.Should().Be(2540);
+        task.TilingMode.Should().Be("1/2错位");
+        task.OutputFormat.Should().Be("PSB");
+        task.Reviewer.Should().Be("张三");
+        File.ReadAllText(newSource).Should().Be("new-wood");
+    }
+
+    [Fact]
+    public void ListProductionPresets_WithoutSavedPreset_ReturnsSimpleInstruction()
+    {
+        var service = CreateService();
+        var tools = new DuanxingQuickActionTools(
+            service,
+            new Mock<IPhotoshopService>().Object);
+
+        var json = tools.查看规格模板();
+
+        using var document = JsonDocument.Parse(json);
+        document.RootElement.GetProperty("模板数量").GetInt32().Should().Be(0);
+        document.RootElement.GetProperty("下一步").GetString().Should()
+            .Contain("记住这个规格叫木纹");
+    }
+
+    [Fact]
     public void StartAndRun_CreatesProtectedTaskAndRunsCheckInOneCall()
     {
         Directory.CreateDirectory(_testRoot);

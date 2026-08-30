@@ -48,6 +48,7 @@ public class WorkflowSelfTestRunnerTests : IDisposable
         result.ReviewStatus.Should().Be("已批准，可导出生产版");
         result.Messages.Should().Contain(message => message.Contains("预览和中文复核单"));
         result.Messages.Should().Contain(message => message.Contains("通过并导出"));
+        result.Messages.Should().Contain(message => message.Contains("中文规格模板"));
         taskService.IsResultApproved(result.TaskDirectory, result.ReviewFile).Should().BeTrue();
     }
 

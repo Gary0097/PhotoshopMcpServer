@@ -79,6 +79,9 @@ try {
     $required = @(
         'duanxing_make_this_image',
         'duanxing_approve_and_export_latest',
+        'duanxing_save_recent_as_preset',
+        'duanxing_list_presets',
+        'duanxing_start_from_preset_and_run',
         'duanxing_start_and_run',
         'duanxing_start_like_recent_and_run',
         'duanxing_continue_and_run',
@@ -164,7 +167,7 @@ try {
     Write-Host ''
     Write-Host 'Codex 工具列表检查通过。' -ForegroundColor Green
     Write-Host "客户模式工具数量：$($tools.Count)"
-    Write-Host '“做这张”、“通过并导出”、继续、查看、退回等日常入口均正常。'
+    Write-Host '“做这张”、“通过并导出”、中文规格模板、继续、查看、退回等日常入口均正常。'
     Write-Host '所有工具说明和参数名称均为中文，两句话帮助和首次规格引导均可正常调用。'
     Write-Host '底层任意脚本和旧的不完整入口均未加载。'
 }

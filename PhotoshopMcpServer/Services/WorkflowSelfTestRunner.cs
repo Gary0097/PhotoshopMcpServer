@@ -27,6 +27,13 @@ public sealed class WorkflowSelfTestRunner(
             "现场自检"));
         var taskDirectory = Directory.GetParent(task.OutputDirectory)?.FullName
             ?? throw new InvalidOperationException("无法确定完整流程自检任务目录。");
+        var preset = taskWorkspaceService.SaveMostRecentTaskAsPreset("现场自检规格");
+        var loadedPreset = taskWorkspaceService.GetProductionPreset("现场自检规格");
+        if (loadedPreset.WidthMillimeters != task.WidthMillimeters ||
+            loadedPreset.HeightMillimeters != task.HeightMillimeters ||
+            loadedPreset.Dpi != task.Dpi ||
+            !string.Equals(loadedPreset.Name, preset.Name, StringComparison.Ordinal))
+            throw new InvalidOperationException("中文规格模板保存后与任务规格不一致。");
         var tools = new PhotoshopProductionTools(photoshopService, taskWorkspaceService);
         var previewMessage = tools.一键生成工艺检查版(taskDirectory);
         var reviewFile = Directory.GetFiles(task.OutputDirectory, "*.psd")
@@ -83,6 +90,7 @@ public sealed class WorkflowSelfTestRunner(
         var messages = new List<string>
         {
             "已建立中文任务目录并创建工作副本。",
+            "已保存并重新读取中文规格模板，参数保持一致。",
             "已通过一句“通过并导出”绑定人工复核记录并生成生产版。",
             "已同时生成可在 Codex 中查看的轻量预览和中文复核单。",
             "已导出 TIFF 生产版。",

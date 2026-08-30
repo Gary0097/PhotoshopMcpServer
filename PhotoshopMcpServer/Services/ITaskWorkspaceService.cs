@@ -8,6 +8,9 @@ public interface ITaskWorkspaceService
     DuanxingTaskRecord LoadTask(string taskDirectory);
     DuanxingTaskRecord FindMostRecentTask();
     DuanxingTaskRecord FindLatestTaskForSource(string sourceFile);
+    DuanxingProductionPreset SaveMostRecentTaskAsPreset(string presetName);
+    DuanxingProductionPreset GetProductionPreset(string presetName);
+    IReadOnlyList<DuanxingProductionPreset> GetProductionPresets();
     bool IsApproved(string taskDirectory);
     bool IsResultApproved(string taskDirectory, string resultFile);
     string GetApprovedResultFile(string taskDirectory);

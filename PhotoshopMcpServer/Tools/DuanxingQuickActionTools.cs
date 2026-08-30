@@ -78,6 +78,97 @@ public class DuanxingQuickActionTools(
         }
     }
 
+    [McpServerTool(Name = "duanxing_save_recent_as_preset")]
+    [Description(
+        "把最近任务已经确认的宽高、印刷精度、拼接方式、输出格式和复核人记成中文规格模板。" +
+        "客户说“记住这个规格叫木纹”时调用，以后不必重复输入数字。")]
+    public string 记住最近规格(
+        [Description("客户给规格起的简短中文名称，例如：木纹、布纹、小样。")]
+        string 模板名称)
+    {
+        try
+        {
+            var preset = taskWorkspaceService.SaveMostRecentTaskAsPreset(模板名称);
+            return JsonSerializer.Serialize(new
+            {
+                成功 = true,
+                已记住 = preset.Name,
+                成品规格 = $"宽 {preset.WidthMillimeters} 毫米 × 高 {preset.HeightMillimeters} 毫米，精度 {preset.Dpi}",
+                拼接方式 = preset.TilingMode,
+                输出格式 = preset.OutputFormat,
+                复核人 = preset.Reviewer,
+                下一步 = $"以后拖入原图，只要说“按{preset.Name}做这张”。"
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception exception)
+        {
+            return SerializeResult(false, "规格没有记住", exception.Message);
+        }
+    }
+
+    [McpServerTool(Name = "duanxing_list_presets")]
+    [Description("查看这台电脑已经保存的中文规格模板。客户说“有哪些规格”“查看规格模板”时调用。")]
+    public string 查看规格模板()
+    {
+        try
+        {
+            var presets = taskWorkspaceService.GetProductionPresets();
+            return JsonSerializer.Serialize(new
+            {
+                成功 = true,
+                模板数量 = presets.Count,
+                规格模板 = presets.Select(preset => new
+                {
+                    名称 = preset.Name,
+                    成品规格 = $"宽 {preset.WidthMillimeters} 毫米 × 高 {preset.HeightMillimeters} 毫米，精度 {preset.Dpi}",
+                    拼接方式 = preset.TilingMode,
+                    输出格式 = preset.OutputFormat,
+                    复核人 = preset.Reviewer
+                }),
+                下一步 = presets.Count == 0
+                    ? "先完成一张图，再说“记住这个规格叫木纹”。"
+                    : "拖入原图后说“按模板名称做这张”。"
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception exception)
+        {
+            return SerializeResult(false, "没有读取规格模板", exception.Message);
+        }
+    }
+
+    [McpServerTool(Name = "duanxing_start_from_preset_and_run")]
+    [Description(
+        "按客户点名的中文规格模板处理新原图，一次完成原图保护、任务建立、检查版、预览和中文复核单。" +
+        "客户说“按木纹做这张”时调用，不使用可能属于其他产品的最近规格。")]
+    public string 按规格模板做这张(
+        [Description("客户刚拖入 Codex 的新原图完整位置。")]
+        string 原图路径,
+        [Description("客户点名的中文规格模板，例如：木纹。")]
+        string 模板名称,
+        [Description("本次复核人有变化时填写；留空则使用模板中的复核人。")]
+        string 复核人 = "")
+    {
+        try
+        {
+            var preset = taskWorkspaceService.GetProductionPreset(模板名称);
+            var effectiveReviewer = string.IsNullOrWhiteSpace(复核人)
+                ? preset.Reviewer
+                : 复核人.Trim();
+            return 开始并生成检查版(
+                原图路径,
+                preset.WidthMillimeters,
+                preset.HeightMillimeters,
+                preset.Dpi,
+                effectiveReviewer,
+                preset.TilingMode,
+                preset.OutputFormat);
+        }
+        catch (Exception exception)
+        {
+            return SerializeResult(false, "没有按规格模板开始作图", exception.Message);
+        }
+    }
+
     [McpServerTool(Name = "duanxing_start_and_run")]
     [Description(
         "一键开始端行作图：保护客户原图、建立中文任务、生成工艺检查版和复核预览。" +

@@ -95,3 +95,14 @@ public record DuanxingTaskProgress(
     int ProductionFileCount,
     bool OriginalUnchanged
 );
+
+public record DuanxingProductionPreset(
+    string Name,
+    string SavedAt,
+    double WidthMillimeters,
+    double HeightMillimeters,
+    int Dpi,
+    string TilingMode,
+    string OutputFormat,
+    string Reviewer
+);
