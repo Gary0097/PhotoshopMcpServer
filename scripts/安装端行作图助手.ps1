@@ -43,7 +43,7 @@ if ($DryRun) {
     exit 0
 }
 
-Write-Host '第 1/3 步：检查电脑环境'
+Write-Host '第 1/4 步：检查电脑环境'
 if ($SkipEnvironmentCheck) {
     Write-Host '一键部署已经完成环境检查，自动跳过。' -ForegroundColor Green
 }
@@ -55,7 +55,7 @@ else {
 }
 
 Write-Host ''
-Write-Host '第 2/3 步：添加端行本地插件来源'
+Write-Host '第 2/4 步：添加端行本地插件来源'
 $marketplaceJson = & codex plugin marketplace list --json | Out-String
 if ($LASTEXITCODE -ne 0) {
     throw '无法读取 Codex 插件来源。'
@@ -79,7 +79,7 @@ else {
 }
 
 Write-Host ''
-Write-Host '第 3/3 步：安装端行作图助手'
+Write-Host '第 3/4 步：安装端行作图助手'
 $installJson = & codex plugin add 'duanxing-creative-automation@personal' --json | Out-String
 if ($LASTEXITCODE -ne 0) {
     throw '安装或更新端行作图助手失败。'
@@ -95,6 +95,76 @@ if ($serverProcess.HasExited) {
     throw "作图服务启动失败，退出代码：$($serverProcess.ExitCode)"
 }
 Stop-Process -Id $serverProcess.Id -Force
+
+Write-Host ''
+Write-Host '第 4/4 步：连接端行作图工具'
+$mcpName = 'duanxing-adobe-automation'
+$configuredMcp = & codex mcp get $mcpName --json 2>$null | Out-String
+if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($configuredMcp)) {
+    $null = & codex mcp remove $mcpName
+    if ($LASTEXITCODE -ne 0) {
+        throw '旧版端行作图工具连接无法更新。'
+    }
+}
+$null = & codex mcp add $mcpName -- $serverPath
+if ($LASTEXITCODE -ne 0) {
+    throw '端行作图工具连接失败。'
+}
+$codexHomePath = if ([string]::IsNullOrWhiteSpace($env:CODEX_HOME)) {
+    Join-Path ([Environment]::GetFolderPath('UserProfile')) '.codex'
+}
+else {
+    [IO.Path]::GetFullPath($env:CODEX_HOME)
+}
+$codexConfigPath = Join-Path $codexHomePath 'config.toml'
+$utf8NoBom = [Text.UTF8Encoding]::new($false)
+$configLines = @([IO.File]::ReadAllLines($codexConfigPath, $utf8NoBom))
+$mcpSection = "[mcp_servers.$mcpName]"
+$sectionIndex = [Array]::IndexOf($configLines, $mcpSection)
+if ($sectionIndex -lt 0) {
+    throw 'Codex 已登记工具，但配置中没有找到端行连接。'
+}
+$approvalSettings = @(
+    'enabled = true',
+    'required = true',
+    'startup_timeout_sec = 30',
+    'tool_timeout_sec = 3600',
+    'default_tools_approval_mode = "writes"'
+)
+$updatedConfigLines = @()
+if ($sectionIndex -gt 0) {
+    $updatedConfigLines += $configLines[0..$sectionIndex]
+}
+else {
+    $updatedConfigLines += $configLines[0]
+}
+$updatedConfigLines += $approvalSettings
+if ($sectionIndex + 1 -lt $configLines.Count) {
+    $updatedConfigLines += $configLines[($sectionIndex + 1)..($configLines.Count - 1)]
+}
+[IO.File]::WriteAllLines(
+    $codexConfigPath,
+    $updatedConfigLines,
+    $utf8NoBom)
+$savedConfigLines = @([IO.File]::ReadAllLines($codexConfigPath, $utf8NoBom))
+if ($savedConfigLines -notcontains 'required = true' -or
+    $savedConfigLines -notcontains 'default_tools_approval_mode = "writes"') {
+    throw '端行作图工具的安全确认配置没有保存。'
+}
+$mcpJson = & codex mcp get $mcpName --json | Out-String
+if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($mcpJson)) {
+    throw '端行作图工具已登记，但 Codex 无法读取它。'
+}
+$mcpConfig = $mcpJson | ConvertFrom-Json
+if ($mcpConfig.enabled -ne $true -or
+    $mcpConfig.transport.type -ne 'stdio' -or
+    -not [string]::Equals(
+        [IO.Path]::GetFullPath($mcpConfig.transport.command),
+        [IO.Path]::GetFullPath($serverPath),
+        [StringComparison]::OrdinalIgnoreCase)) {
+    throw '端行作图工具连接参数不完整。'
+}
+Write-Host '端行作图工具已经连接。' -ForegroundColor Green
 
 Write-Host ''
 Write-Host '安装完成。' -ForegroundColor Green

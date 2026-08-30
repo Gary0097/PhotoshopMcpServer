@@ -1,14 +1,14 @@
 {
   "mcpServers": {
     "duanxing-adobe-automation": {
-      "command": "powershell",
-      "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "./scripts/start-server.ps1"
-      ]
+      "command": "./server/win-x64/PhotoshopMcpServer.exe",
+      "cwd": ".",
+      "enabled": true,
+      "required": true,
+      "startup_timeout_sec": 15,
+      "tool_timeout_sec": 3600,
+      "default_tools_approval_mode": "writes",
+      "args": []
     }
   }
 }
