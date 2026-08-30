@@ -13,11 +13,11 @@ $repositoryRoot = [System.IO.Path]::GetFullPath(
 $projectPath = Join-Path $repositoryRoot 'PhotoshopMcpServer\PhotoshopMcpServer.csproj'
 
 if (-not (Test-Path -LiteralPath $projectPath)) {
-    throw 'The bundled Duanxing MCP server is missing and no source project was found.'
+    throw '端行作图助手文件不完整，请重新运行根目录的一键安装。'
 }
 
 if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
-    throw 'The plugin bundle is incomplete. A .NET 10 SDK is required for source fallback.'
+    throw '端行作图助手文件不完整，请重新运行根目录的一键安装。'
 }
 
 & dotnet run --project $projectPath --no-launch-profile

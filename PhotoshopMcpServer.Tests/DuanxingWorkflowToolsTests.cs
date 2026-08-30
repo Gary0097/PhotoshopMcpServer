@@ -61,7 +61,8 @@ public class DuanxingWorkflowToolsTests : IDisposable
         using var document = JsonDocument.Parse(json);
         var root = document.RootElement;
         root.GetProperty("成功").GetBoolean().Should().BeTrue();
-        root.GetProperty("成品规格").GetString().Should().Be("200 × 100 mm，2540 DPI");
+        root.GetProperty("成品规格").GetString()
+            .Should().Be("宽 200 毫米 × 高 100 毫米，印刷精度 2540");
         root.GetProperty("拼接方式").GetString().Should().Be("1/2错位");
         root.GetProperty("下一步").GetString().Should().Contain("直接做检查版");
     }
@@ -100,6 +101,9 @@ public class DuanxingWorkflowToolsTests : IDisposable
         help.Should().NotContain("task.json");
         help.Should().NotContain("MCP");
         help.Should().NotContain("文件路径");
+        help.Should().NotContain("DPI");
+        help.Should().NotContain("mm");
+        help.Should().Contain("精度 2540");
     }
 
     public void Dispose()

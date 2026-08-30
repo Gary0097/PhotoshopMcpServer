@@ -69,16 +69,16 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
 
     [McpServerTool(Name = "duanxing_prepare_task_simple")]
     [Description(
-        "极简开始端行作图：客户只需提供原图、成品宽高、DPI 和复核人。" +
-        "自动使用原图旁边的“端行作图输出”目录、自动生成中文任务名，默认平铺并输出 TIFF。")]
+        "极简开始端行作图：客户只需拖入原图，并用中文提供成品宽高、印刷精度和复核人。" +
+        "自动使用原图旁边的“端行作图输出”目录、自动生成中文任务名，并采用安全的生产默认值。")]
     public string 极简开始作图(
         [Description("原图完整路径；也可以是客户刚拖入 Codex 的图片路径。")]
         string 原图路径,
-        [Description("成品宽度，单位 mm；这是生产参数，不能猜。")]
+        [Description("成品宽度，单位毫米；这是生产参数，不能猜。")]
         double 成品宽度毫米,
-        [Description("成品高度，单位 mm；这是生产参数，不能猜。")]
+        [Description("成品高度，单位毫米；这是生产参数，不能猜。")]
         double 成品高度毫米,
-        [Description("目标 DPI；这是生产参数，不能猜。")]
+        [Description("印刷精度；客户说“精度”或“清晰度”时使用该数值。这是生产参数，不能猜。")]
         int 目标DPI,
         [Description("最终看图并确认能否生产的人员姓名。")]
         string 复核人,
@@ -135,7 +135,7 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
                 task.TaskId,
                 task.Status,
                 任务名称 = task.TaskName,
-                成品规格 = $"{task.WidthMillimeters} × {task.HeightMillimeters} mm，{task.Dpi} DPI",
+                成品规格 = $"宽 {task.WidthMillimeters} 毫米 × 高 {task.HeightMillimeters} 毫米，印刷精度 {task.Dpi}",
                 拼接方式 = task.TilingMode,
                 输出格式 = task.OutputFormat,
                 task.Reviewer,
@@ -310,12 +310,12 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
     [Description("返回端行员工日常只需使用的四步中文作图菜单。用户说“帮助”“怎么用”或不知道下一步时调用。")]
     public string 获取中文作图口令()
         => """
-            端行作图只需要下面四句话：
+            端行作图只需要四步，全程说中文：
 
             1.【开始】拖入原图后说：
-            开始处理这张图：成品 200×200 mm，2540 DPI，复核人张三。其他按默认，直接做检查版。
+            开始处理这张图：成品宽 200 毫米、高 200 毫米，精度 2540，复核人张三。其他按默认。
 
-            2.【继续】重新打开 Codex 后说：
+            2.【继续】第二天重新打开后，再拖入同一张原图并说：
             继续这张图上次的任务，直接继续。
 
             3.【复核】看完结果后说：
