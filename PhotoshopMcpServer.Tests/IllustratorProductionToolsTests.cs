@@ -53,6 +53,51 @@ public class IllustratorProductionToolsTests
                 script.Contains("setEntirePath(points)"))));
     }
 
+    [Fact]
+    public void TraceWaveReference_CreatesExpandedAiAndSvgWithoutEmbeddedRaster()
+    {
+        _taskWorkspaceService.Setup(service => service.LoadTask("task")).Returns(CreateTask());
+        _illustratorService.Setup(service => service.ExecuteJavaScriptWithResult(It.IsAny<string>()))
+            .Returns(new IllustratorScriptResult(true, "路径数量：18", string.Empty));
+        var tools = new IllustratorProductionTools(
+            _illustratorService.Object,
+            _taskWorkspaceService.Object);
+
+        var result = tools.提取原图波纹矢量候选("task");
+
+        result.Should().Contain("原图波纹矢量候选已生成").And.Contain(".svg");
+        _illustratorService.Verify(service => service.ExecuteJavaScriptWithResult(
+            It.Is<string>(script =>
+                script.Contains("placed.trace()") &&
+                script.Contains("resampleResolution=72") &&
+                script.Contains("preprocessBlur=2") &&
+                script.Contains("minArea=100") &&
+                script.Contains("expandTracing(false)") &&
+                script.Contains("ExportType.SVG") &&
+                script.Contains("embedRasterImages=false"))));
+    }
+
+    [Theory]
+    [InlineData(-1, 72, "明暗分界")]
+    [InlineData(256, 72, "明暗分界")]
+    [InlineData(128, 20, "描摹精度")]
+    [InlineData(128, 301, "描摹精度")]
+    public void TraceWaveReference_WithInvalidSettings_ReturnsChineseError(
+        int threshold,
+        double resolution,
+        string expected)
+    {
+        var tools = new IllustratorProductionTools(
+            _illustratorService.Object,
+            _taskWorkspaceService.Object);
+
+        tools.提取原图波纹矢量候选("task", threshold, resolution)
+            .Should().Contain(expected);
+        _illustratorService.Verify(
+            service => service.ExecuteJavaScriptWithResult(It.IsAny<string>()),
+            Times.Never);
+    }
+
     [Theory]
     [InlineData(0, 2, 0, "线宽")]
     [InlineData(2, 1, 0, "间距")]

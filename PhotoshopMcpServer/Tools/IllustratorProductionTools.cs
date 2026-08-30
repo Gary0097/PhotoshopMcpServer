@@ -101,6 +101,50 @@ public class IllustratorProductionTools(
         }
     }
 
+    [McpServerTool(Name = "duanxing_trace_wave_reference")]
+    [Description(
+        "从端行任务原图提取大尺度波纹，生成可编辑 AI 和 SVG 矢量候选。" +
+        "自动降低描摹分辨率并过滤细密底纹，适合客户说“把原图波纹做成矢量”时使用；" +
+        "结果仍需在 Illustrator 中复核走势和无缝衔接。")]
+    public string 提取原图波纹矢量候选(
+        [Description("包含 task.json 的端行任务目录。")]
+        string 任务目录,
+        [Description("明暗分界，0 到 255；通常使用默认 128，不需要客户填写。")]
+        int 明暗分界 = 128,
+        [Description("描摹精度，每英寸像素数；通常使用默认 72，不需要客户填写。")]
+        double 描摹精度 = 72)
+    {
+        try
+        {
+            if (明暗分界 is < 0 or > 255)
+                throw new ArgumentException("明暗分界必须在 0 到 255 之间。");
+            if (描摹精度 is < 36 or > 300)
+                throw new ArgumentException("描摹精度必须在 36 到 300 之间。");
+            var task = taskWorkspaceService.LoadTask(任务目录);
+            var safeName = SanitizeFileName(task.TaskName);
+            var illustratorPath = Path.Combine(task.OutputDirectory, $"{safeName}_原图波纹矢量候选.ai");
+            var svgPath = Path.Combine(task.OutputDirectory, $"{safeName}_原图波纹矢量候选.svg");
+            var script = BuildWaveTraceScript(
+                task.WidthMillimeters,
+                task.HeightMillimeters,
+                task.WorkingCopy,
+                illustratorPath,
+                svgPath,
+                明暗分界,
+                描摹精度);
+            var result = illustratorService.ExecuteJavaScriptWithResult(script);
+            if (!result.Success)
+                return $"原图波纹矢量候选生成失败：{result.ErrorMessage}";
+            return $"原图波纹矢量候选已生成：{illustratorPath}\n" +
+                $"通用矢量副本已生成：{svgPath}\n" +
+                "请检查波纹走势、路径数量和四边衔接；这一步是候选描摹，不代表已经验收。";
+        }
+        catch (Exception exception)
+        {
+            return $"无法提取原图波纹矢量：{exception.Message}";
+        }
+    }
+
     private static string BuildStraightLineScript(
         double widthMillimeters,
         double heightMillimeters,
@@ -156,6 +200,33 @@ public class IllustratorProductionTools(
             "wave.strokeWidth=stroke;wave.strokeColor=black;wave.setEntirePath(points);}" +
             $"doc.saveAs(new File(\"{EscapePath(outputPath)}\"));" +
             $"return \"{EscapeJavaScript(outputPath)}\";" +
+            "})();";
+
+    private static string BuildWaveTraceScript(
+        double widthMillimeters,
+        double heightMillimeters,
+        string sourcePath,
+        string illustratorPath,
+        string svgPath,
+        int threshold,
+        double resolution)
+        => "(function(){" +
+            $"var width={Points(widthMillimeters)},height={Points(heightMillimeters)};" +
+            "var doc=app.documents.add(DocumentColorSpace.RGB,width,height);" +
+            "var placed=doc.placedItems.add();" +
+            $"placed.file=new File(\"{EscapePath(sourcePath)}\");" +
+            "placed.width=width;placed.height=height;placed.left=0;placed.top=height;" +
+            "var plugin=placed.trace();var tracing=plugin.tracing;var options=tracing.tracingOptions;" +
+            "options.tracingMode=TracingModeType.TRACINGMODEBLACKANDWHITE;" +
+            "options.fills=true;options.strokes=false;options.ignoreWhite=true;" +
+            $"options.threshold={threshold};options.resample=true;options.resampleResolution={Format(resolution)};" +
+            "options.preprocessBlur=2;options.minArea=100;options.pathFitting=3;options.cornerAngle=120;" +
+            "app.redraw();var pathCount=tracing.pathCount;tracing.expandTracing(false);app.redraw();" +
+            "var aiOptions=new IllustratorSaveOptions();" +
+            $"doc.saveAs(new File(\"{EscapePath(illustratorPath)}\"),aiOptions);" +
+            "var svgOptions=new ExportOptionsSVG();svgOptions.embedRasterImages=false;" +
+            $"doc.exportFile(new File(\"{EscapePath(svgPath)}\"),ExportType.SVG,svgOptions);" +
+            "return '路径数量：'+pathCount;" +
             "})();";
 
     private static void ValidateLineParameters(

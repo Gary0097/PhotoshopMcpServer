@@ -91,6 +91,7 @@ try {
         'duanxing_approve_latest_result',
         'duanxing_reject_latest_result',
         'duanxing_export_latest_approved'
+        'duanxing_trace_wave_reference'
     )
     $forbidden = @(
         'photoshop_execute_script',
@@ -169,7 +170,7 @@ try {
     Write-Host ''
     Write-Host 'Codex 工具列表检查通过。' -ForegroundColor Green
     Write-Host "客户模式工具数量：$($tools.Count)"
-    Write-Host '“做这张”、“通过并导出”、中文规格模板、批量作图、继续、查看和退回等入口均正常。'
+    Write-Host '“做这张”、“按端行样板做”、波纹矢量、通过并导出等入口均正常。'
     Write-Host '所有工具说明和参数名称均为中文，两句话帮助和首次规格引导均可正常调用。'
     Write-Host '底层任意脚本和旧的不完整入口均未加载。'
 }
