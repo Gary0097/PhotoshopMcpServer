@@ -368,17 +368,17 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
     }
 
     [McpServerTool(Name = "duanxing_get_chinese_prompts")]
-    [Description("返回端行员工最快只需两句话的中文作图菜单。用户说“帮助”“怎么用”或还没有任何任务时调用。")]
+    [Description("返回端行员工三句中文作图口令。用户说“帮助”“怎么用”或还没有任何任务时调用。")]
     public string 获取中文作图口令()
         => """
-            端行作图最快只需要两句话：
+            端行作图只需要记三句话：
 
-            1. 拖入原图后说：
-            做这张。
-            第一次系统只会问一次生产规格；以后自动沿用上次规格。
+            普通作图：做这张。
+            第一次系统只会问一次生产规格，以后自动沿用。
 
-            2. 看完预览和复核单后说：
-            通过并导出。
+            去波纹、补底纹并做矢量：按端行样板做。
+
+            看完结果满意：通过并导出。
 
             不满意就说“退回修改：哪里要改”。
             第二天接着做就说“继续上次”。

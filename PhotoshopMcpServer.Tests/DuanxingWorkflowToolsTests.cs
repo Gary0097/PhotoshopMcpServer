@@ -185,15 +185,17 @@ public class DuanxingWorkflowToolsTests : IDisposable
     }
 
     [Fact]
-    public void ChineseHelp_ReturnsTwoPhraseWorkflowWithoutTechnicalTerms()
+    public void ChineseHelp_ReturnsThreePhraseWorkflowWithoutTechnicalTerms()
     {
         var tools = new DuanxingWorkflowTools(CreateService());
 
         var help = tools.获取中文作图口令();
 
-        help.Should().Contain("最快只需要两句话");
+        help.Should().Contain("只需要记三句话");
         help.Should().Contain("做这张");
+        help.Should().Contain("按端行样板做");
         help.Should().Contain("通过并导出");
+        help.Should().NotContain("MCP").And.NotContain("JSON").And.NotContain("SVG");
         help.Should().NotContain("task.json");
         help.Should().NotContain("MCP");
         help.Should().NotContain("文件路径");
