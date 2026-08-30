@@ -244,11 +244,15 @@ public class TaskWorkspaceServiceTests : IDisposable
         File.WriteAllText(otherFile, "other-content");
 
         service.IsResultApproved(taskDirectory, approvedFile).Should().BeTrue();
+        service.GetApprovedResultFile(taskDirectory).Should().Be(Path.GetFullPath(approvedFile));
         service.IsResultApproved(taskDirectory, otherFile).Should().BeFalse();
 
         File.WriteAllText(approvedFile, "changed-after-approval");
         service.IsApproved(taskDirectory).Should().BeFalse();
         service.IsResultApproved(taskDirectory, approvedFile).Should().BeFalse();
+        var action = () => service.GetApprovedResultFile(taskDirectory);
+        action.Should().Throw<InvalidOperationException>()
+            .WithMessage("*内容发生变化*");
     }
 
     [Fact]

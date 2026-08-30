@@ -133,6 +133,61 @@ public class PhotoshopProductionToolsTests
         }
     }
 
+    [Fact]
+    public void SimpleExport_UsesApprovedFileAndTaskFormat()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "duanxing-simple-export", Guid.NewGuid().ToString("N"));
+        try
+        {
+            var taskDirectory = Path.Combine(root, "task");
+            var outputDirectory = Path.Combine(taskDirectory, "02_处理结果");
+            Directory.CreateDirectory(outputDirectory);
+            var approvedFile = Path.Combine(outputDirectory, "已批准.psd");
+            File.WriteAllText(approvedFile, "sample");
+            _taskWorkspaceService.Setup(service => service.LoadTask(taskDirectory))
+                .Returns(CreateTask(outputDirectory) with { OutputFormat = "TIFF" });
+            _taskWorkspaceService.Setup(service => service.GetApprovedResultFile(taskDirectory))
+                .Returns(approvedFile);
+            _taskWorkspaceService.Setup(service => service.IsApproved(taskDirectory)).Returns(true);
+            _taskWorkspaceService.Setup(service => service.IsResultApproved(taskDirectory, approvedFile)).Returns(true);
+            _photoshopService.Setup(service => service.ExecuteJavaScriptWithResult(It.IsAny<string>()))
+                .Returns(new PhotoshopScriptResult(true, "ok", string.Empty));
+            var tools = new PhotoshopProductionTools(
+                _photoshopService.Object,
+                _taskWorkspaceService.Object);
+
+            var result = tools.一键导出生产版(taskDirectory);
+
+            result.Should().Contain("生产版已导出");
+            result.Should().Contain("_生产版.tif");
+            _taskWorkspaceService.Verify(service => service.GetApprovedResultFile(taskDirectory));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+                Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void SimpleExport_WithoutApproval_ReturnsChineseInstruction()
+    {
+        _taskWorkspaceService.Setup(service => service.LoadTask("task")).Returns(CreateTask());
+        _taskWorkspaceService.Setup(service => service.GetApprovedResultFile("task"))
+            .Throws(new InvalidOperationException("尚未复核通过，请先生成中文复核单并回答“通过”。"));
+        var tools = new PhotoshopProductionTools(
+            _photoshopService.Object,
+            _taskWorkspaceService.Object);
+
+        var result = tools.一键导出生产版("task");
+
+        result.Should().Contain("尚未复核通过");
+        result.Should().Contain("回答“通过”");
+        _photoshopService.Verify(
+            service => service.ExecuteJavaScriptWithResult(It.IsAny<string>()),
+            Times.Never);
+    }
+
     [Theory]
     [InlineData("平铺", "applyOffset")]
     [InlineData("1/2错位", "pasteAt(width,-height/2)")]

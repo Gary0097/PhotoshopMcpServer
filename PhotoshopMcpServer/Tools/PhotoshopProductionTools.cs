@@ -337,6 +337,32 @@ public class PhotoshopProductionTools(
         }
     }
 
+    [McpServerTool(Name = "duanxing_export_approved_simple")]
+    [Description(
+        "一键导出已经批准的 Photoshop 生产版。客户不需要提供结果文件路径；系统自动使用复核时锁定的文件，默认沿用任务输出格式。")]
+    public string 一键导出生产版(
+        [Description("包含 task.json 的端行任务目录。")]
+        string 任务目录,
+        [Description("通常留空，自动沿用任务格式；明确需要时可填 PSD、PSB、TIFF、PNG 或 JPEG。")]
+        string 输出格式 = "",
+        [Description("JPEG 质量 1 到 100；非 JPEG 会忽略。")]
+        int JPEG质量 = 100)
+    {
+        try
+        {
+            var task = taskWorkspaceService.LoadTask(任务目录);
+            var approvedFile = taskWorkspaceService.GetApprovedResultFile(任务目录);
+            var requestedFormat = string.IsNullOrWhiteSpace(输出格式)
+                ? task.OutputFormat
+                : 输出格式;
+            return 导出已批准生产版(任务目录, approvedFile, requestedFormat, JPEG质量);
+        }
+        catch (Exception exception)
+        {
+            return $"无法一键导出生产版：{exception.Message}";
+        }
+    }
+
     private static string BuildProductionExportScript(
         string sourcePath,
         string outputPath,

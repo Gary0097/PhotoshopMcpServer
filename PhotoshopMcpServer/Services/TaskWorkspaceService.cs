@@ -224,6 +224,17 @@ public sealed partial class TaskWorkspaceService : ITaskWorkspaceService
             IsReviewResultValid(task, review);
     }
 
+    public string GetApprovedResultFile(string taskDirectory)
+    {
+        var task = LoadTask(taskDirectory);
+        var review = LoadLatestReview(Path.GetFullPath(taskDirectory));
+        if (review == null || review.TaskId != task.TaskId || !review.Approved)
+            throw new InvalidOperationException("尚未复核通过，请先生成中文复核单并回答“通过”。");
+        if (!IsReviewResultValid(task, review))
+            throw new InvalidOperationException("已批准文件丢失或内容发生变化，请重新复核。");
+        return Path.GetFullPath(review.ResultFile);
+    }
+
     public DuanxingReviewSummary BuildReviewSummary(string taskDirectory)
     {
         var fullTaskDirectory = Path.GetFullPath(taskDirectory);
