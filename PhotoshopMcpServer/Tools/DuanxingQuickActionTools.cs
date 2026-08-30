@@ -674,6 +674,8 @@ public class DuanxingQuickActionTools(
         string detail = "",
         string reviewCard = "")
     {
+        if (!succeeded)
+            detail = CustomerErrorFormatter.Format(detail);
         object customerReviewCard = "无";
         if (!string.IsNullOrWhiteSpace(reviewCard))
         {

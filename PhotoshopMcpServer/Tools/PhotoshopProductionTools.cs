@@ -21,12 +21,12 @@ public class PhotoshopProductionTools(
             var script = $"app.open(new File(\"{EscapePath(task.WorkingCopy)}\"));";
             var result = photoshopService.ExecuteJavaScriptWithResult(script);
             if (!result.Success)
-                return $"打开失败：{result.ErrorMessage}";
+                return $"打开失败：{CustomerErrorFormatter.Format(result.ErrorMessage)}";
             return $"已打开工作副本：{task.WorkingCopy}\n原图未修改。";
         }
         catch (Exception exception)
         {
-            return $"无法打开任务：{exception.Message}";
+            return $"无法打开任务：{CustomerErrorFormatter.Format(exception)}";
         }
     }
 
@@ -55,13 +55,13 @@ public class PhotoshopProductionTools(
                 "})();";
             var result = photoshopService.ExecuteJavaScriptWithResult(script);
             if (!result.Success)
-                return $"设置尺寸失败：{result.ErrorMessage}";
+                return $"设置尺寸失败：{CustomerErrorFormatter.Format(result.ErrorMessage)}";
             return $"规格设置完成：{task.TargetWidthPixels}×{task.TargetHeightPixels} 像素，" +
                 $"{task.Dpi} DPI。\n已保存：{outputPath}";
         }
         catch (Exception exception)
         {
-            return $"无法设置任务规格：{exception.Message}";
+            return $"无法设置任务规格：{CustomerErrorFormatter.Format(exception)}";
         }
     }
 
@@ -93,12 +93,12 @@ public class PhotoshopProductionTools(
                 "})();";
             var result = photoshopService.ExecuteJavaScriptWithResult(script);
             if (!result.Success)
-                return $"生成检查图失败：{result.ErrorMessage}";
+                return $"生成检查图失败：{CustomerErrorFormatter.Format(result.ErrorMessage)}";
             return $"平铺无缝检查图已生成：{outputPath}\n请重点检查画面中央的横向和纵向接缝。";
         }
         catch (Exception exception)
         {
-            return $"无法生成无缝检查图：{exception.Message}";
+            return $"无法生成无缝检查图：{CustomerErrorFormatter.Format(exception)}";
         }
     }
 
@@ -135,13 +135,13 @@ public class PhotoshopProductionTools(
                 "})();";
             var result = photoshopService.ExecuteJavaScriptWithResult(script);
             if (!result.Success)
-                return $"生成 1/2 错位检查图失败：{result.ErrorMessage}";
+                return $"生成 1/2 错位检查图失败：{CustomerErrorFormatter.Format(result.ErrorMessage)}";
             return $"1/2 错位检查图已生成：{outputPath}\n" +
                 "请检查中间竖向接缝，以及右列上下错位后的横向连续性。";
         }
         catch (Exception exception)
         {
-            return $"无法生成 1/2 错位检查图：{exception.Message}";
+            return $"无法生成 1/2 错位检查图：{CustomerErrorFormatter.Format(exception)}";
         }
     }
 
@@ -165,7 +165,7 @@ public class PhotoshopProductionTools(
         }
         catch (Exception exception)
         {
-            return $"无法生成工艺检查版：{exception.Message}";
+            return $"无法生成工艺检查版：{CustomerErrorFormatter.Format(exception)}";
         }
     }
 
@@ -214,13 +214,13 @@ public class PhotoshopProductionTools(
                 "})();";
             var result = photoshopService.ExecuteJavaScriptWithResult(script);
             if (!result.Success)
-                return $"复核预览生成失败：{result.ErrorMessage}";
+                return $"复核预览生成失败：{CustomerErrorFormatter.Format(result.ErrorMessage)}";
             return $"复核预览已生成：{outputPath}\n" +
                 "请直接显示这张图片，并提醒客户预览仅用于看效果，不是生产文件。";
         }
         catch (Exception exception)
         {
-            return $"无法生成复核预览：{exception.Message}";
+            return $"无法生成复核预览：{CustomerErrorFormatter.Format(exception)}";
         }
     }
 
@@ -254,13 +254,13 @@ public class PhotoshopProductionTools(
                 "})();";
             var result = photoshopService.ExecuteJavaScriptWithResult(script);
             if (!result.Success)
-                return $"创建补图画布失败：{result.ErrorMessage}";
+                return $"创建补图画布失败：{CustomerErrorFormatter.Format(result.ErrorMessage)}";
             return $"补图扩展画布已创建：{outputPath}\n" +
                 "新增透明区域可用于 AI 补图或人工修补，请保持原纹理方向和接缝连续。";
         }
         catch (Exception exception)
         {
-            return $"无法创建补图扩展画布：{exception.Message}";
+            return $"无法创建补图扩展画布：{CustomerErrorFormatter.Format(exception)}";
         }
     }
 
@@ -300,13 +300,13 @@ public class PhotoshopProductionTools(
                 "})();";
             var result = photoshopService.ExecuteJavaScriptWithResult(script);
             if (!result.Success)
-                return $"清晰化预览生成失败：{result.ErrorMessage}";
+                return $"清晰化预览生成失败：{CustomerErrorFormatter.Format(result.ErrorMessage)}";
             return $"基础清晰化预览已生成：{outputPath}\n" +
                 $"参数：数量 {Format(锐化数量)}，半径 {Format(半径像素)} px，阈值 {阈值}。";
         }
         catch (Exception exception)
         {
-            return $"无法生成清晰化预览：{exception.Message}";
+            return $"无法生成清晰化预览：{CustomerErrorFormatter.Format(exception)}";
         }
     }
 
@@ -324,7 +324,7 @@ public class PhotoshopProductionTools(
         }
         catch (Exception exception)
         {
-            return $"无法检查复核状态：{exception.Message}";
+            return $"无法检查复核状态：{CustomerErrorFormatter.Format(exception)}";
         }
     }
 
@@ -383,12 +383,12 @@ public class PhotoshopProductionTools(
                 JPEG质量);
             var result = photoshopService.ExecuteJavaScriptWithResult(script);
             if (!result.Success)
-                return $"生产版导出失败：{result.ErrorMessage}";
+                return $"生产版导出失败：{CustomerErrorFormatter.Format(result.ErrorMessage)}";
             return $"生产版已导出：{outputPath}\n来源：{sourcePath}\n复核状态：已通过。";
         }
         catch (Exception exception)
         {
-            return $"无法导出生产版：{exception.Message}";
+            return $"无法导出生产版：{CustomerErrorFormatter.Format(exception)}";
         }
     }
 
@@ -414,7 +414,7 @@ public class PhotoshopProductionTools(
         }
         catch (Exception exception)
         {
-            return $"无法一键导出生产版：{exception.Message}";
+            return $"无法一键导出生产版：{CustomerErrorFormatter.Format(exception)}";
         }
     }
 

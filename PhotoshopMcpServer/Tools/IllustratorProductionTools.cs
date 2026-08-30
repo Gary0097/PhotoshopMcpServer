@@ -40,13 +40,13 @@ public class IllustratorProductionTools(
                 outputPath);
             var result = illustratorService.ExecuteJavaScriptWithResult(script);
             if (!result.Success)
-                return $"直线折光线生成失败：{result.ErrorMessage}";
+                return $"直线折光线生成失败：{CustomerErrorFormatter.Format(result.ErrorMessage)}";
             return $"直线折光线 AI 已生成：{outputPath}\n" +
                 $"参数：线宽 {Format(线宽毫米)} mm，间距 {Format(间距毫米)} mm，角度 {Format(角度)}°。";
         }
         catch (Exception exception)
         {
-            return $"无法生成直线折光线：{exception.Message}";
+            return $"无法生成直线折光线：{CustomerErrorFormatter.Format(exception)}";
         }
     }
 
@@ -90,14 +90,14 @@ public class IllustratorProductionTools(
                 outputPath);
             var result = illustratorService.ExecuteJavaScriptWithResult(script);
             if (!result.Success)
-                return $"S 型折光线生成失败：{result.ErrorMessage}";
+                return $"S 型折光线生成失败：{CustomerErrorFormatter.Format(result.ErrorMessage)}";
             return $"S 型折光线 AI 已生成：{outputPath}\n" +
                 $"参数：线宽 {Format(线宽毫米)} mm，行距 {Format(行距毫米)} mm，" +
                 $"振幅 {Format(振幅毫米)} mm，波长 {Format(波长毫米)} mm，角度 {Format(角度)}°。";
         }
         catch (Exception exception)
         {
-            return $"无法生成 S 型折光线：{exception.Message}";
+            return $"无法生成 S 型折光线：{CustomerErrorFormatter.Format(exception)}";
         }
     }
 
@@ -134,14 +134,14 @@ public class IllustratorProductionTools(
                 描摹精度);
             var result = illustratorService.ExecuteJavaScriptWithResult(script);
             if (!result.Success)
-                return $"原图波纹矢量候选生成失败：{result.ErrorMessage}";
+                return $"原图波纹矢量候选生成失败：{CustomerErrorFormatter.Format(result.ErrorMessage)}";
             return $"原图波纹矢量候选已生成：{illustratorPath}\n" +
                 $"通用矢量副本已生成：{svgPath}\n" +
                 "请检查波纹走势、路径数量和四边衔接；这一步是候选描摹，不代表已经验收。";
         }
         catch (Exception exception)
         {
-            return $"无法提取原图波纹矢量：{exception.Message}";
+            return $"无法提取原图波纹矢量：{CustomerErrorFormatter.Format(exception)}";
         }
     }
 

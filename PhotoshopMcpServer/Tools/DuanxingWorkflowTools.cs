@@ -62,7 +62,7 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
             return JsonSerializer.Serialize(new
             {
                 成功 = false,
-                提示 = exception.Message
+                提示 = CustomerErrorFormatter.Format(exception)
             }, new JsonSerializerOptions { WriteIndented = true });
         }
     }
@@ -106,7 +106,7 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
             return JsonSerializer.Serialize(new
             {
                 成功 = false,
-                提示 = exception.Message
+                提示 = CustomerErrorFormatter.Format(exception)
             }, new JsonSerializerOptions { WriteIndented = true });
         }
     }
@@ -137,7 +137,7 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
             return JsonSerializer.Serialize(new
             {
                 成功 = false,
-                提示 = exception.Message
+                提示 = CustomerErrorFormatter.Format(exception)
             }, new JsonSerializerOptions { WriteIndented = true });
         }
     }
@@ -160,7 +160,7 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
             return JsonSerializer.Serialize(new
             {
                 成功 = false,
-                提示 = exception.Message
+                提示 = CustomerErrorFormatter.Format(exception)
             }, new JsonSerializerOptions { WriteIndented = true });
         }
     }
@@ -181,7 +181,7 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
             return JsonSerializer.Serialize(new
             {
                 成功 = false,
-                提示 = exception.Message
+                提示 = CustomerErrorFormatter.Format(exception)
             }, new JsonSerializerOptions { WriteIndented = true });
         }
     }
@@ -216,7 +216,7 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
             return JsonSerializer.Serialize(new
             {
                 成功 = false,
-                提示 = exception.Message
+                提示 = CustomerErrorFormatter.Format(exception)
             }, new JsonSerializerOptions { WriteIndented = true });
         }
     }
@@ -259,7 +259,7 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
             return JsonSerializer.Serialize(new
             {
                 成功 = false,
-                提示 = exception.Message
+                提示 = CustomerErrorFormatter.Format(exception)
             }, new JsonSerializerOptions { WriteIndented = true });
         }
     }
@@ -299,7 +299,7 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
             return JsonSerializer.Serialize(new
             {
                 成功 = false,
-                提示 = exception.Message
+                提示 = CustomerErrorFormatter.Format(exception)
             }, new JsonSerializerOptions { WriteIndented = true });
         }
     }
@@ -333,7 +333,7 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
             return JsonSerializer.Serialize(new
             {
                 成功 = false,
-                提示 = exception.Message
+                提示 = CustomerErrorFormatter.Format(exception)
             }, new JsonSerializerOptions { WriteIndented = true });
         }
     }
@@ -362,7 +362,7 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
             return JsonSerializer.Serialize(new
             {
                 成功 = false,
-                提示 = exception.Message
+                提示 = CustomerErrorFormatter.Format(exception)
             }, new JsonSerializerOptions { WriteIndented = true });
         }
     }

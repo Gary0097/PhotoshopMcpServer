@@ -201,12 +201,40 @@ try {
         $makePayload.下一步 -notmatch '请一次告诉我') {
         throw '做这张入口无法给首次客户提供中文引导，请重新安装插件。'
     }
+    Send-ProtocolMessage @{
+        jsonrpc = '2.0'
+        id = 5
+        method = 'tools/call'
+        params = @{
+            name = 'duanxing_make_this_image'
+            arguments = @{
+                原图路径 = 'C:\端行验收\不存在的秘密原图.tif'
+                成品宽度毫米 = 100
+                成品高度毫米 = 100
+                印刷精度 = 300
+                拼接方式 = '平铺'
+                输出格式 = 'TIFF'
+                复核人 = '自动验收'
+            }
+        }
+    }
+    $errorResponse = $process.StandardOutput.ReadLine() | ConvertFrom-Json
+    $errorText = $errorResponse.result.content[0].text
+    $errorPayload = $errorText | ConvertFrom-Json
+    $customerErrorText = $errorPayload | ConvertTo-Json -Depth 5
+    if ($null -ne $errorResponse.error -or
+        $errorResponse.result.isError -eq $true -or
+        $customerErrorText -notmatch '[\u4e00-\u9fff]' -or
+        $customerErrorText -match '[A-Za-z]:\\|HRESULT|Exception| at ') {
+        throw '客户错误提示泄露了英文技术信息或本地路径。'
+    }
     Write-Host ''
     Write-Host 'Codex 工具列表检查通过。' -ForegroundColor Green
     Write-Host "客户模式工具数量：$($tools.Count)"
     Write-Host '“做这张”、“按端行样板做”、波纹矢量、通过并导出等入口均正常。'
     Write-Host '所有工具标题、说明和参数名称均为中文，三句口令帮助和首次规格引导均可正常调用。'
     Write-Host '只读检查不会多余确认，改图和导出仍保留安全确认。'
+    Write-Host '失败场景只返回中文处理提示，不泄露本地路径或英文技术异常。'
     Write-Host '底层任意脚本和旧的不完整入口均未加载。'
 }
 finally {
