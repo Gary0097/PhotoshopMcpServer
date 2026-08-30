@@ -1,0 +1,7 @@
+interface:
+  display_name: "端行图像工艺自动化"
+  short_description: "使用 Codex 编排 Photoshop 与 Illustrator 2026 纹理工艺"
+  default_prompt: "使用 $duanxing-image-craft 检查环境并安全执行端行纹理工艺。"
+
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "duanxing-adobe-automation": {
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "./scripts/start-server.ps1"
+      ]
+    }
+  }
+}

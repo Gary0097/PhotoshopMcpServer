@@ -9,8 +9,27 @@ namespace PhotoshopMcpServer.Tools;
 // The primary tool is ExecuteJavaScript which allows full Photoshop scripting.
 // Additional convenience tools provide structured access to common operations.
 [McpServerToolType]
-public class PhotoshopTools(IPhotoshopService photoshopService)
+public class PhotoshopTools
 {
+    private readonly IPhotoshopService _photoshopService;
+    private readonly bool _allowArbitraryScripts;
+
+    public PhotoshopTools(IPhotoshopService photoshopService)
+        : this(
+            photoshopService,
+            string.Equals(
+                Environment.GetEnvironmentVariable("DUANXING_ALLOW_ARBITRARY_SCRIPTS"),
+                "true",
+                StringComparison.OrdinalIgnoreCase))
+    {
+    }
+
+    public PhotoshopTools(IPhotoshopService photoshopService, bool allowArbitraryScripts)
+    {
+        _photoshopService = photoshopService;
+        _allowArbitraryScripts = allowArbitraryScripts;
+    }
+
     [McpServerTool]
     [Description(
         "Executes arbitrary JavaScript in Adobe Photoshop's scripting engine. " +
@@ -32,7 +51,12 @@ public class PhotoshopTools(IPhotoshopService photoshopService)
             "  - Get layer list: 'var names=[]; for(var i=0;i<app.activeDocument.layers.length;i++) names.push(app.activeDocument.layers[i].name); names.join(\",\")'")]
         string script)
     {
-        var result = photoshopService.ExecuteJavaScriptWithResult(script);
+        if (!_allowArbitraryScripts)
+            return "Error: Arbitrary Photoshop scripts are disabled in production mode. " +
+                "Use an approved business-level tool or set DUANXING_ALLOW_ARBITRARY_SCRIPTS=true " +
+                "for an authorized development session.";
+
+        var result = _photoshopService.ExecuteJavaScriptWithResult(script);
         if (!result.Success)
             return $"Error: {result.ErrorMessage}";
         return result.Result;
@@ -43,7 +67,7 @@ public class PhotoshopTools(IPhotoshopService photoshopService)
         "Checks whether Adobe Photoshop is currently running and accessible via COM. " +
         "Returns 'true' if Photoshop is running, 'false' otherwise.")]
     public string IsPhotoshopRunning()
-        => photoshopService.IsPhotoshopRunning().ToString().ToLowerInvariant();
+        => _photoshopService.IsPhotoshopRunning().ToString().ToLowerInvariant();
 
     [McpServerTool]
     [Description(
@@ -54,7 +78,7 @@ public class PhotoshopTools(IPhotoshopService photoshopService)
     {
         try
         {
-            photoshopService.LaunchPhotoshop();
+            _photoshopService.LaunchPhotoshop();
             return "Photoshop launched and connected successfully.";
         }
         catch (Exception exception)
@@ -71,7 +95,7 @@ public class PhotoshopTools(IPhotoshopService photoshopService)
     {
         try
         {
-            return photoshopService.GetPhotoshopVersion();
+            return _photoshopService.GetPhotoshopVersion();
         }
         catch (Exception exception)
         {
@@ -88,7 +112,7 @@ public class PhotoshopTools(IPhotoshopService photoshopService)
     {
         try
         {
-            var documentInfo = photoshopService.GetActiveDocumentInfo();
+            var documentInfo = _photoshopService.GetActiveDocumentInfo();
             return
                 $"Name: {documentInfo.Name}\n" +
                 $"Path: {documentInfo.FilePath}\n" +
@@ -110,7 +134,7 @@ public class PhotoshopTools(IPhotoshopService photoshopService)
     {
         try
         {
-            var documentNames = photoshopService.GetOpenDocumentNames();
+            var documentNames = _photoshopService.GetOpenDocumentNames();
             if (documentNames.Count == 0)
                 return "No documents open.";
             return string.Join(", ", documentNames);
@@ -131,7 +155,7 @@ public class PhotoshopTools(IPhotoshopService photoshopService)
         string filePath)
     {
         var script = $"app.open(new File(\"{filePath.Replace("\\", "/")}\"));";
-        var result = photoshopService.ExecuteJavaScriptWithResult(script);
+        var result = _photoshopService.ExecuteJavaScriptWithResult(script);
         if (!result.Success)
             return $"Failed to open file: {result.ErrorMessage}";
         return $"Opened: {filePath}";
@@ -144,7 +168,7 @@ public class PhotoshopTools(IPhotoshopService photoshopService)
         "Use ExecuteJavaScript for advanced save options (Save As, Export, etc.).")]
     public string SaveActiveDocument()
     {
-        var result = photoshopService.ExecuteJavaScriptWithResult("app.activeDocument.save();");
+        var result = _photoshopService.ExecuteJavaScriptWithResult("app.activeDocument.save();");
         if (!result.Success)
             return $"Failed to save document: {result.ErrorMessage}";
         return "Document saved successfully.";
@@ -166,7 +190,7 @@ public class PhotoshopTools(IPhotoshopService photoshopService)
     {
         var script =
             $"var doc = app.documents.add({width}, {height}, {resolution}, \"{documentName}\"); doc.name;";
-        var result = photoshopService.ExecuteJavaScriptWithResult(script);
+        var result = _photoshopService.ExecuteJavaScriptWithResult(script);
         if (!result.Success)
             return $"Failed to create document: {result.ErrorMessage}";
         return $"Created document '{documentName}' ({width}x{height} px, {resolution} ppi).";
@@ -188,7 +212,7 @@ public class PhotoshopTools(IPhotoshopService photoshopService)
             $"exportOptions.transparency = true;" +
             $"app.activeDocument.exportDocument(new File(\"{normalizedPath}\"), ExportType.SAVEFORWEB, exportOptions);" +
             $"\"{outputPath}\"";
-        var result = photoshopService.ExecuteJavaScriptWithResult(script);
+        var result = _photoshopService.ExecuteJavaScriptWithResult(script);
         if (!result.Success)
             return $"Failed to export PNG: {result.ErrorMessage}";
         return $"Exported PNG to: {outputPath}";
@@ -211,7 +235,7 @@ public class PhotoshopTools(IPhotoshopService photoshopService)
             $"exportOptions.quality = {quality};" +
             $"app.activeDocument.exportDocument(new File(\"{normalizedPath}\"), ExportType.SAVEFORWEB, exportOptions);" +
             $"\"{outputPath}\"";
-        var result = photoshopService.ExecuteJavaScriptWithResult(script);
+        var result = _photoshopService.ExecuteJavaScriptWithResult(script);
         if (!result.Success)
             return $"Failed to export JPEG: {result.ErrorMessage}";
         return $"Exported JPEG (quality={quality}) to: {outputPath}";
@@ -233,7 +257,7 @@ public class PhotoshopTools(IPhotoshopService photoshopService)
             "  }" +
             "  return result.join('\\n');" +
             "})();";
-        var operationResult = photoshopService.ExecuteJavaScriptWithResult(script);
+        var operationResult = _photoshopService.ExecuteJavaScriptWithResult(script);
         if (!operationResult.Success)
             return $"Error: {operationResult.ErrorMessage}";
         return operationResult.Result;

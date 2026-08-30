@@ -15,7 +15,7 @@ public class PhotoshopToolsTests
     public PhotoshopToolsTests()
     {
         _mockService = new Mock<IPhotoshopService>();
-        _tools = new PhotoshopTools(_mockService.Object);
+        _tools = new PhotoshopTools(_mockService.Object, allowArbitraryScripts: true);
     }
 
     [Fact]
@@ -40,6 +40,19 @@ public class PhotoshopToolsTests
         var result = _tools.ExecuteJavaScript(script);
 
         result.Should().Be("Error: Script error");
+    }
+
+    [Fact]
+    public void ExecuteJavaScript_InProductionMode_IsBlocked()
+    {
+        var productionTools = new PhotoshopTools(_mockService.Object);
+
+        var result = productionTools.ExecuteJavaScript("app.activeDocument.flatten()");
+
+        result.Should().Contain("disabled in production mode");
+        _mockService.Verify(
+            service => service.ExecuteJavaScriptWithResult(It.IsAny<string>()),
+            Times.Never);
     }
 
     [Fact]
