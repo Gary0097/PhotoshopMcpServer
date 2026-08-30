@@ -72,9 +72,9 @@ public class IllustratorProductionTools(
         {
             ValidateLineParameters(线宽毫米, 行距毫米, 角度);
             if (振幅毫米 <= 0)
-                throw new ArgumentOutOfRangeException(nameof(振幅毫米), "振幅必须大于 0 mm。");
+                throw new ArgumentException("振幅必须大于 0 毫米。");
             if (波长毫米 <= 0)
-                throw new ArgumentOutOfRangeException(nameof(波长毫米), "波长必须大于 0 mm。");
+                throw new ArgumentException("波长必须大于 0 毫米。");
             var task = taskWorkspaceService.LoadTask(任务目录);
             var outputPath = Path.Combine(
                 task.OutputDirectory,
@@ -164,11 +164,11 @@ public class IllustratorProductionTools(
         double angleDegrees)
     {
         if (lineWidthMillimeters <= 0)
-            throw new ArgumentOutOfRangeException(nameof(lineWidthMillimeters), "线宽必须大于 0 mm。");
+            throw new ArgumentException("线宽必须大于 0 毫米。");
         if (spacingMillimeters <= lineWidthMillimeters)
-            throw new ArgumentOutOfRangeException(nameof(spacingMillimeters), "间距必须大于线宽。");
+            throw new ArgumentException("间距必须大于线宽。");
         if (angleDegrees is < -180 or > 180)
-            throw new ArgumentOutOfRangeException(nameof(angleDegrees), "角度必须在 -180° 到 180° 之间。");
+            throw new ArgumentException("角度必须在 -180° 到 180° 之间。");
     }
 
     private static string Points(double millimeters)

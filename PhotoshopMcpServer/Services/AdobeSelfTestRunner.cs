@@ -11,7 +11,7 @@ public sealed class AdobeSelfTestRunner(
     public AdobeSelfTestResult Run(string outputRoot)
     {
         if (string.IsNullOrWhiteSpace(outputRoot))
-            throw new ArgumentException("现场自检输出目录不能为空。", nameof(outputRoot));
+            throw new ArgumentException("现场自检输出目录不能为空。");
 
         var outputDirectory = Path.Combine(
             Path.GetFullPath(outputRoot),

@@ -122,9 +122,9 @@ public sealed partial class TaskWorkspaceService : ITaskWorkspaceService
         string comment)
     {
         if (string.IsNullOrWhiteSpace(taskDirectory))
-            throw new ArgumentException("任务目录不能为空。", nameof(taskDirectory));
+            throw new ArgumentException("任务目录不能为空。");
         if (string.IsNullOrWhiteSpace(reviewer))
-            throw new ArgumentException("复核人不能为空。", nameof(reviewer));
+            throw new ArgumentException("复核人不能为空。");
 
         var fullTaskDirectory = Path.GetFullPath(taskDirectory);
         var task = LoadTask(fullTaskDirectory);
@@ -168,7 +168,7 @@ public sealed partial class TaskWorkspaceService : ITaskWorkspaceService
         if (!SupportedInputExtensions.Contains(Path.GetExtension(generatedFile)))
             throw new ArgumentException("AI 结果格式不支持。请使用 PSD、PSB、TIFF、PNG、JPEG 或 BMP。");
         if (string.IsNullOrWhiteSpace(operation))
-            throw new ArgumentException("请说明 AI 做了什么，例如：补图扩展、清晰修复或纹理生成。", nameof(operation));
+            throw new ArgumentException("请说明人工智能做了什么，例如：补图扩展、清晰修复或纹理生成。");
 
         var fullTaskDirectory = Path.GetFullPath(taskDirectory);
         var task = LoadTask(fullTaskDirectory);
@@ -200,7 +200,7 @@ public sealed partial class TaskWorkspaceService : ITaskWorkspaceService
     public DuanxingTaskRecord LoadTask(string taskDirectory)
     {
         if (string.IsNullOrWhiteSpace(taskDirectory))
-            throw new ArgumentException("任务目录不能为空。", nameof(taskDirectory));
+            throw new ArgumentException("任务目录不能为空。");
         var fullTaskDirectory = Path.GetFullPath(taskDirectory);
         var taskFile = Path.Combine(fullTaskDirectory, "task.json");
         if (!File.Exists(taskFile))
@@ -572,17 +572,17 @@ public sealed partial class TaskWorkspaceService : ITaskWorkspaceService
         if (!SupportedInputExtensions.Contains(Path.GetExtension(request.SourceFile)))
             throw new ArgumentException("原图格式不支持。请使用 PSD、PSB、TIFF、PNG、JPEG 或 BMP。");
         if (string.IsNullOrWhiteSpace(request.OutputRoot))
-            throw new ArgumentException("请选择输出目录。", nameof(request.OutputRoot));
+            throw new ArgumentException("请选择输出目录。");
         if (string.IsNullOrWhiteSpace(request.TaskName))
-            throw new ArgumentException("请填写任务名称。", nameof(request.TaskName));
+            throw new ArgumentException("请填写任务名称。");
         if (request.WidthMillimeters <= 0 || request.HeightMillimeters <= 0)
-            throw new ArgumentOutOfRangeException(nameof(request), "成品宽度和高度必须大于 0 mm。");
+            throw new ArgumentException("成品宽度和高度必须大于 0 毫米。");
         if (request.Dpi is < 72 or > 10000)
-            throw new ArgumentOutOfRangeException(nameof(request.Dpi), "DPI 必须在 72 到 10000 之间。");
+            throw new ArgumentException("印刷精度必须在 72 到 10000 之间。");
         if (!SupportedOutputFormats.Contains(request.OutputFormat ?? string.Empty))
-            throw new ArgumentException("输出格式不支持。", nameof(request.OutputFormat));
+            throw new ArgumentException("输出格式不支持。");
         if (string.IsNullOrWhiteSpace(request.Reviewer))
-            throw new ArgumentException("请填写复核人。", nameof(request.Reviewer));
+            throw new ArgumentException("请填写复核人。");
     }
 
     private static int MillimetersToPixels(double millimeters, int dpi)

@@ -182,9 +182,7 @@ public class PhotoshopProductionTools(
         try
         {
             if (最长边像素 is < 800 or > 4000)
-                throw new ArgumentOutOfRangeException(
-                    nameof(最长边像素),
-                    "预览图最长边必须在 800 到 4000 像素之间。");
+                throw new ArgumentException("预览图最长边必须在 800 到 4000 像素之间。");
             var summary = taskWorkspaceService.BuildReviewSummary(任务目录);
             if (string.IsNullOrWhiteSpace(summary.LatestResultFile) ||
                 !File.Exists(summary.LatestResultFile))
@@ -283,11 +281,11 @@ public class PhotoshopProductionTools(
         try
         {
             if (锐化数量 is < 1 or > 500)
-                throw new ArgumentOutOfRangeException(nameof(锐化数量), "锐化数量必须在 1 到 500 之间。");
+                throw new ArgumentException("锐化数量必须在 1 到 500 之间。");
             if (半径像素 is < 0.1 or > 250)
-                throw new ArgumentOutOfRangeException(nameof(半径像素), "锐化半径必须在 0.1 到 250 像素之间。");
+                throw new ArgumentException("锐化半径必须在 0.1 到 250 像素之间。");
             if (阈值 is < 0 or > 255)
-                throw new ArgumentOutOfRangeException(nameof(阈值), "阈值必须在 0 到 255 之间。");
+                throw new ArgumentException("阈值必须在 0 到 255 之间。");
             var task = taskWorkspaceService.LoadTask(任务目录);
             var outputPath = Path.Combine(
                 task.OutputDirectory,
@@ -368,7 +366,7 @@ public class PhotoshopProductionTools(
                 _ => throw new ArgumentException("生产输出格式只支持 PSD、PSB、TIFF、PNG 或 JPEG。")
             };
             if (JPEG质量 is < 1 or > 100)
-                throw new ArgumentOutOfRangeException(nameof(JPEG质量), "JPEG 质量必须在 1 到 100 之间。");
+                throw new ArgumentException("JPEG 质量必须在 1 到 100 之间。");
 
             var productionDirectory = Path.Combine(Path.GetFullPath(任务目录), "04_生产版");
             Directory.CreateDirectory(productionDirectory);
@@ -446,7 +444,7 @@ public class PhotoshopProductionTools(
                 "var options=new ExportOptionsSaveForWeb();options.format=SaveDocumentType.JPEG;" +
                 $"options.quality={jpegQuality};" +
                 "doc.exportDocument(output,ExportType.SAVEFORWEB,options);",
-            _ => throw new ArgumentOutOfRangeException(nameof(outputFormat))
+            _ => throw new InvalidOperationException("生产输出格式不支持，请重新选择。")
         };
         return prefix + save + $"return \"{EscapeJavaScript(outputPath)}\";" + "})();";
     }

@@ -47,6 +47,26 @@ public class DuanxingQuickActionToolsTests : IDisposable
     }
 
     [Fact]
+    public void StartAndRun_InvalidSize_ReturnsOnlyChineseCustomerMessage()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var source = Path.Combine(_testRoot, "木纹.png");
+        File.WriteAllText(source, "original");
+        var service = CreateService();
+        var photoshop = new Mock<IPhotoshopService>();
+        var tools = new DuanxingQuickActionTools(service, photoshop.Object);
+
+        var json = tools.开始并生成检查版(source, 0, 100, 2540, "张三");
+
+        using var document = JsonDocument.Parse(json);
+        var nextStep = document.RootElement.GetProperty("下一步").GetString();
+        nextStep.Should().Be("成品宽度和高度必须大于 0 毫米。");
+        nextStep.Should().NotContain("Parameter");
+        nextStep.Should().NotContain("request");
+        photoshop.VerifyNoOtherCalls();
+    }
+
+    [Fact]
     public void StartLikeRecentAndRun_ReusesSpecificationsAndProtectsNewOriginal()
     {
         Directory.CreateDirectory(_testRoot);
