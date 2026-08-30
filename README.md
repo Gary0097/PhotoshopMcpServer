@@ -4,6 +4,8 @@
 
 本仓库已经集成 `duanxing-creative-automation` Codex 插件。端行员工不需要学习英文命令、MCP、COM 或 Photoshop 脚本，只需在 Codex 中用中文描述任务。
 
+日常只用四个动作：开始、继续、复核、导出。不知道下一步时直接说“下一步做什么？”。
+
 必备条件：已购买可用的 GPT 服务，已安装并登录 Codex，已安装并激活 Photoshop 2026 与 Illustrator 2026。
 
 最简单的开始方式：

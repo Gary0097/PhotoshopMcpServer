@@ -86,6 +86,22 @@ public class DuanxingWorkflowToolsTests : IDisposable
         root.GetProperty("请回答").GetString().Should().Contain("暂时不能复核");
     }
 
+    [Fact]
+    public void ChineseHelp_ReturnsOnlyFourDailyActionsWithoutTechnicalTerms()
+    {
+        var tools = new DuanxingWorkflowTools(new TaskWorkspaceService());
+
+        var help = tools.获取中文作图口令();
+
+        help.Should().Contain("1.【开始】");
+        help.Should().Contain("2.【继续】");
+        help.Should().Contain("3.【复核】");
+        help.Should().Contain("4.【导出】");
+        help.Should().NotContain("task.json");
+        help.Should().NotContain("MCP");
+        help.Should().NotContain("文件路径");
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_testRoot))
