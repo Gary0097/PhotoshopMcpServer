@@ -69,6 +69,16 @@ public class PhotoshopModelsTests
     }
 
     [Fact]
+    public void IllustratorScriptResult_HasCorrectProperties()
+    {
+        var result = new IllustratorScriptResult(true, "output.ai", string.Empty);
+
+        result.Success.Should().BeTrue();
+        result.Result.Should().Be("output.ai");
+        result.ErrorMessage.Should().BeEmpty();
+    }
+
+    [Fact]
     public void PhotoshopScriptResult_RecordEquality_WorksCorrectly()
     {
         var firstResult = new PhotoshopScriptResult(true, "data", string.Empty);

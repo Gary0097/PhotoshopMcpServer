@@ -9,7 +9,7 @@ namespace PhotoshopMcpServer.Tools;
 [McpServerToolType]
 public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
 {
-    [McpServerTool]
+    [McpServerTool(Name = "duanxing_prepare_task")]
     [Description(
         "开始一个端行作图任务：自动保护原图、创建中文任务目录、生成工作副本、换算毫米和 DPI 对应像素，并保存任务记录。" +
         "在任何纹理处理、无缝拼接、折光线或生产导出前优先调用。")]
@@ -66,7 +66,7 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Name = "duanxing_save_review")]
     [Description("保存端行人工复核结论。只有明确批准后，任务才可以导出为生产版。")]
     public string 保存复核结论(
         [Description("包含 task.json 的端行任务目录。")]
@@ -99,7 +99,7 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Name = "duanxing_get_chinese_prompts")]
     [Description("返回端行员工可以直接复制使用的中文作图口令。")]
     public string 获取中文作图口令()
         => """

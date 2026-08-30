@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using PhotoshopMcpServer.Models;
 
 namespace PhotoshopMcpServer.Services;
 
@@ -72,6 +73,19 @@ public sealed class IllustratorService : IIllustratorService, IDisposable
         {
             throw new InvalidOperationException(
                 "Illustrator has no accessible active document.", exception);
+        }
+    }
+
+    public IllustratorScriptResult ExecuteJavaScriptWithResult(string script)
+    {
+        try
+        {
+            var result = GetApplication().DoJavaScript(script)?.ToString() ?? string.Empty;
+            return new IllustratorScriptResult(true, result, string.Empty);
+        }
+        catch (Exception exception)
+        {
+            return new IllustratorScriptResult(false, string.Empty, exception.Message);
         }
     }
 

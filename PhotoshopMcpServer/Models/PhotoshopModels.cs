@@ -23,3 +23,10 @@ public record PhotoshopOperationResult(
     string Message,
     string Data
 );
+
+// Represents the result of an approved Illustrator JavaScript operation.
+public record IllustratorScriptResult(
+    bool Success,
+    string Result,
+    string ErrorMessage
+);

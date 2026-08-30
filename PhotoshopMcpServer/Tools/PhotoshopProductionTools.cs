@@ -9,7 +9,7 @@ public class PhotoshopProductionTools(
     IPhotoshopService photoshopService,
     ITaskWorkspaceService taskWorkspaceService)
 {
-    [McpServerTool]
+    [McpServerTool(Name = "duanxing_open_working_copy")]
     [Description("在 Photoshop 2026 中打开端行任务的工作副本。只接受包含 task.json 的有效任务目录。")]
     public string 打开任务工作副本(
         [Description("端行任务目录，例如 D:\\端行输出\\DX-任务编号_木纹无缝。")]
@@ -30,7 +30,7 @@ public class PhotoshopProductionTools(
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Name = "duanxing_set_production_dimensions")]
     [Description(
         "按照任务中确认的毫米尺寸和 DPI 设置当前 Photoshop 工作副本的像素尺寸，" +
         "使用双三次重采样，并把结果另存为任务目录中的规格化 PSD。")]
@@ -65,7 +65,7 @@ public class PhotoshopProductionTools(
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Name = "duanxing_create_seamless_check")]
     [Description(
         "为端行任务生成平铺无缝检查图：复制工作副本，将图层水平和垂直各偏移一半并环绕，" +
         "把原来的四边接缝移动到画面中央，便于人工检查和修补。不会覆盖原图。")]
@@ -100,7 +100,7 @@ public class PhotoshopProductionTools(
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Name = "duanxing_check_export_approval")]
     [Description("检查端行任务是否已通过人工复核。未通过时禁止称为生产版或执行最终交付。")]
     public string 检查是否允许导出生产版(
         [Description("包含 task.json 的端行任务目录。")]
