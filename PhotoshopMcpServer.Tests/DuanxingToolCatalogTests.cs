@@ -13,6 +13,7 @@ public class DuanxingToolCatalogTests
 
         toolTypes.Should().Contain(typeof(EnvironmentTools));
         toolTypes.Should().Contain(typeof(DuanxingWorkflowTools));
+        toolTypes.Should().Contain(typeof(DuanxingQuickActionTools));
         toolTypes.Should().Contain(typeof(PhotoshopProductionTools));
         toolTypes.Should().Contain(typeof(IllustratorProductionTools));
         toolTypes.Should().NotContain(typeof(PhotoshopTools));

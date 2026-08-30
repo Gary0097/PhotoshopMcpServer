@@ -8,6 +8,7 @@ public static class DuanxingToolCatalog
         {
             typeof(EnvironmentTools),
             typeof(DuanxingWorkflowTools),
+            typeof(DuanxingQuickActionTools),
             typeof(PhotoshopProductionTools),
             typeof(IllustratorProductionTools)
         };
