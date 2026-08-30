@@ -41,3 +41,14 @@ public record DuanxingReviewRecord(
     string Comment,
     string Status
 );
+
+public record DuanxingAiResultRecord(
+    string TaskId,
+    string RegisteredAt,
+    string Operation,
+    string Prompt,
+    string SourceFile,
+    string ResultFile,
+    string ResultSha256,
+    string Status
+);

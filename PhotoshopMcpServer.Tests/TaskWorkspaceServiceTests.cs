@@ -89,6 +89,59 @@ public class TaskWorkspaceServiceTests : IDisposable
         service.IsApproved(taskDirectory).Should().BeFalse();
     }
 
+    [Fact]
+    public void RegisterAiResult_CopiesAndRecordsResult()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var source = Path.Combine(_testRoot, "原图.png");
+        var generated = Path.Combine(_testRoot, "生成图.png");
+        File.WriteAllText(source, "original");
+        File.WriteAllText(generated, "ai-result");
+        var service = new TaskWorkspaceService();
+        var task = service.PrepareTask(new DuanxingTaskRequest(
+            source, Path.Combine(_testRoot, "输出"), "AI补图", 100, 100, 1270,
+            "不拼接", "PNG", "赵六"));
+        var taskDirectory = Directory.GetParent(task.OutputDirectory)?.FullName
+            ?? throw new InvalidOperationException("Task directory was not created.");
+
+        var result = service.RegisterAiResult(taskDirectory, generated, "补图扩展", "保持原纹理");
+
+        File.Exists(result.ResultFile).Should().BeTrue();
+        File.ReadAllText(result.ResultFile).Should().Be("ai-result");
+        result.ResultFile.Should().StartWith(task.OutputDirectory);
+        result.Status.Should().Be("待人工复核");
+        result.ResultSha256.Should().HaveLength(64);
+        Directory.GetFiles(Path.Combine(taskDirectory, "05_AI记录"), "ai-*.json")
+            .Should().ContainSingle();
+    }
+
+    [Fact]
+    public void RegisterAiResult_InvalidatesPreviousApproval()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var source = Path.Combine(_testRoot, "原图.jpg");
+        var generated = Path.Combine(_testRoot, "清晰图.jpg");
+        File.WriteAllText(source, "original");
+        File.WriteAllText(generated, "enhanced");
+        var service = new TaskWorkspaceService();
+        var task = service.PrepareTask(new DuanxingTaskRequest(
+            source, Path.Combine(_testRoot, "输出"), "AI清晰", 100, 100, 1270,
+            "不拼接", "JPEG", "王五"));
+        var taskDirectory = Directory.GetParent(task.OutputDirectory)?.FullName
+            ?? throw new InvalidOperationException("Task directory was not created.");
+        service.SaveReview(taskDirectory, "王五", true, "通过");
+
+        service.RegisterAiResult(taskDirectory, generated, "清晰修复", "恢复细节");
+
+        service.IsApproved(taskDirectory).Should().BeFalse();
+        var latestReview = Directory.GetFiles(Path.Combine(taskDirectory, "03_复核记录"), "review-*.json")
+            .OrderByDescending(File.GetLastWriteTimeUtc)
+            .First();
+        JsonDocument.Parse(File.ReadAllText(latestReview))
+            .RootElement.GetProperty("Comment").GetString()
+            .Should().Contain("旧复核自动失效");
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_testRoot))

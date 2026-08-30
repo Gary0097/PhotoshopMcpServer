@@ -99,6 +99,46 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
         }
     }
 
+    [McpServerTool(Name = "duanxing_register_ai_result")]
+    [Description(
+        "把 Codex AI 生成或编辑后的图片安全纳入端行任务：复制到处理结果目录、记录提示词和校验值，并让旧复核自动失效。" +
+        "AI 补图、清晰修复或纹理生成完成后必须调用。")]
+    public string 登记AI作图结果(
+        [Description("包含 task.json 的端行任务目录。")]
+        string 任务目录,
+        [Description("Codex AI 已生成图片的完整本地路径。")]
+        string AI结果路径,
+        [Description("填写：补图扩展、清晰修复、纹理生成或其他简短中文名称。")]
+        string 处理类型,
+        [Description("本次 AI 作图实际使用的中文要求，用于追溯。")]
+        string 作图要求)
+    {
+        try
+        {
+            var result = taskWorkspaceService.RegisterAiResult(
+                任务目录,
+                AI结果路径,
+                处理类型,
+                作图要求);
+            return JsonSerializer.Serialize(new
+            {
+                成功 = true,
+                提示 = "AI 结果已保存到任务。请在 Photoshop 中检查，明确复核通过后才能导出生产版。",
+                结果文件 = result.ResultFile,
+                校验值 = result.ResultSha256,
+                result.Status
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception exception)
+        {
+            return JsonSerializer.Serialize(new
+            {
+                成功 = false,
+                提示 = exception.Message
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+    }
+
     [McpServerTool(Name = "duanxing_get_chinese_prompts")]
     [Description("返回端行员工可以直接复制使用的中文作图口令。")]
     public string 获取中文作图口令()
@@ -109,5 +149,6 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
             4. 按 S 型折光线处理：线宽___，间距___，角度___，同时输出 TIFF 和 AI
             5. 检查尺寸、DPI、接缝和文件名，生成复核记录
             6. 复核通过，导出生产版
+            7. 用 AI 把这张图向四周补到目标尺寸，保持原纹理，不要加文字；完成后登记到任务并在 PS 中打开检查
             """;
 }

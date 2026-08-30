@@ -90,6 +90,46 @@ public sealed partial class TaskWorkspaceService : ITaskWorkspaceService
         return review;
     }
 
+    public DuanxingAiResultRecord RegisterAiResult(
+        string taskDirectory,
+        string generatedFile,
+        string operation,
+        string prompt)
+    {
+        if (string.IsNullOrWhiteSpace(generatedFile) || !File.Exists(generatedFile))
+            throw new FileNotFoundException("找不到 AI 生成结果，请先确认图片已经生成。", generatedFile);
+        if (!SupportedInputExtensions.Contains(Path.GetExtension(generatedFile)))
+            throw new ArgumentException("AI 结果格式不支持。请使用 PSD、PSB、TIFF、PNG、JPEG 或 BMP。");
+        if (string.IsNullOrWhiteSpace(operation))
+            throw new ArgumentException("请说明 AI 做了什么，例如：补图扩展、清晰修复或纹理生成。", nameof(operation));
+
+        var fullTaskDirectory = Path.GetFullPath(taskDirectory);
+        var task = LoadTask(fullTaskDirectory);
+        var sourcePath = Path.GetFullPath(generatedFile);
+        var extension = Path.GetExtension(sourcePath).ToLowerInvariant();
+        var safeOperation = SanitizeName(operation);
+        var resultName = $"AI_{safeOperation}_{DateTime.Now:yyyyMMdd-HHmmss-fff}{extension}";
+        var resultPath = Path.Combine(task.OutputDirectory, resultName);
+        Directory.CreateDirectory(task.OutputDirectory);
+        File.Copy(sourcePath, resultPath, overwrite: false);
+
+        var record = new DuanxingAiResultRecord(
+            task.TaskId,
+            DateTimeOffset.Now.ToString("O"),
+            operation.Trim(),
+            prompt?.Trim() ?? string.Empty,
+            sourcePath,
+            resultPath,
+            CalculateSha256(resultPath),
+            "待人工复核");
+        var aiDirectory = Path.Combine(fullTaskDirectory, "05_AI记录");
+        Directory.CreateDirectory(aiDirectory);
+        WriteJson(Path.Combine(aiDirectory, $"ai-{DateTime.Now:yyyyMMdd-HHmmss-fff}.json"), record);
+
+        SaveReview(fullTaskDirectory, task.Reviewer, false, "AI 结果已更新，旧复核自动失效，请重新检查后批准。");
+        return record;
+    }
+
     public DuanxingTaskRecord LoadTask(string taskDirectory)
     {
         if (string.IsNullOrWhiteSpace(taskDirectory))
