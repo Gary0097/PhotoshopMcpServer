@@ -1,30 +1,30 @@
-# Texture workflow
+# 中文纹理作图流程
 
-## Intake
+## 收图
 
-Collect the source file, recipe name/version, physical width and height, DPI, color mode, bit depth, tiling mode, line parameters, pixel/vector outputs, destination, and reviewer. Do not infer a missing production value.
+收集原图、工艺名称/版本、成品宽高、DPI、色彩模式、位深、拼接方式、线条参数、像素/矢量输出、保存位置和复核人。不能猜测缺失的生产参数。
 
-## Supported first-phase recipes
+## 首期工艺
 
-- Texture uniformity while preserving the source's recognizable character.
-- Basic restoration or clarity improvement.
-- Texture extension, including the representative 100 x 200 mm to 200 x 200 mm case.
-- Seamless flat tiling and half-drop tiling.
-- Straight or S-shaped refraction lines with configurable width, spacing, density, and angle.
-- Pixel export and editable Illustrator vector output.
-- 1270, 2540, and 5080 DPI export when the agreed sample and machine resources permit it.
+- 尽量保持原图特征的纹理均匀处理。
+- 基础修复和清晰化。
+- 纹理补图/扩展，包括 100×200 mm 扩为 200×200 mm。
+- 平铺无缝和 1/2 错位无缝。
+- 直线或 S 型折光线；线宽、间距、密度和角度可调。
+- 像素图和可编辑 Illustrator 矢量图输出。
+- 在样板和电脑资源允许时输出 1270、2540、5080 DPI。
 
-## Execution
+## 执行
 
-1. Run the environment preflight.
-2. Hash or otherwise identify the source, then create a working copy and task/version ID.
-3. Show the normalized recipe parameters for confirmation.
-4. Execute approved Photoshop pixel steps and Illustrator vector steps, recording each step result.
-5. Stop on failure and retain the last valid checkpoint.
-6. Validate deterministic output properties.
-7. Present input/output comparison and the recipe/version record to the designated reviewer.
-8. Export the production version only after explicit human approval.
+1. 检查环境。
+2. 调用 `开始端行作图任务`，建立原图哈希、工作副本、任务号和版本号。
+3. 用中文展示整理后的工艺参数，请用户确认。
+4. 执行已批准的 PS 像素步骤和 Illustrator 矢量步骤，记录每步结果。
+5. 失败即停止，保留最后一个有效检查点。
+6. 自动检查尺寸、DPI、格式、文件名和版本。
+7. 向指定复核人展示前后对比及工艺记录。
+8. 调用 `保存复核结论`；只有明确通过后才导出生产版。
 
-## Acceptance record
+## 验收记录
 
-Record environment versions, source identity, recipe version, parameters, elapsed time, generated files, automatic checks, reviewer, decision, and limitations. Classify feedback as a defect, recipe parameter issue, AI variance, sample issue, known process boundary, or new requirement.
+记录环境版本、原图身份、工艺版本、参数、耗时、生成文件、自动检查、复核人、结论和限制。问题分类为：程序缺陷、工艺参数、AI 波动、样板问题、已知工艺边界或新增需求。

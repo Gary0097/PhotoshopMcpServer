@@ -1,36 +1,48 @@
 ---
 name: duanxing-image-craft
-description: Operate the Duanxing Photoshop and Illustrator 2026 texture workflow through Codex. Use for deployment checks, texture uniformity, restoration, extension, seamless tiling, refraction lines, high-DPI export, version records, or UAT with Duanxing samples. Do not use for unrelated general image editing.
+description: 使用中文通过 Codex 操作端行 Photoshop 2026 和 Illustrator 2026 图像工艺。环境检查、纹理均匀、清晰修复、补图扩展、无缝拼接、折光线、高 DPI 导出、版本记录或样板验收时使用。不用于无关的普通修图。
 ---
 
-# Duanxing Image Craft
+# 端行中文作图助手
 
-Use the plugin's `duanxing-adobe-automation` MCP server to run approved Duanxing image workflows. Keep Photoshop pixel work, Illustrator vector work, AI-assisted output, and human review traceable.
+使用插件的 `duanxing-adobe-automation` 工具执行端行图像工艺。面向客户的回复、参数确认、错误说明和复核提示全部使用简体中文。不要要求客户理解 MCP、COM、JavaScript、JSON 或英文工具名。
 
-## Required preflight
+## 简单交互原则
 
-Before the first Adobe operation in a session, call `CheckDuanxingEnvironment`.
+- 优先直接行动，只有缺少生产必需参数时才提问。
+- 一次最多询问 3 个最关键问题；能从当前文件或已确认模板读取的内容不要重复询问。
+- 把技术错误翻译为“发生了什么、客户现在做什么”，不要直接抛出英文异常。
+- 每个阶段只给客户一个明确的下一步。
+- 用户说“帮助”“怎么用”或意思不清楚时，调用 `获取中文作图口令`，给出可复制的例句。
 
-The workflow may proceed only when all four customer prerequisites are satisfied:
+## 必做环境检查
 
-- A usable paid GPT account/service is available and Codex login is verified.
-- Codex is installed with this plugin and its MCP server enabled.
-- Adobe Photoshop 2026 is installed, licensed, and starts successfully.
-- Adobe Illustrator 2026 is installed, licensed, and starts successfully.
+每个新会话第一次操作 Adobe 前调用 `CheckDuanxingEnvironment`。必须满足：
 
-VPN connectivity and license/login state require human confirmation when the tool cannot verify them. Report missing prerequisites and stop Adobe mutations until they are resolved.
+- GPT 已购买且 Codex 已登录。
+- 本插件和 MCP 已启用。
+- Photoshop 2026 已安装、授权并能启动。
+- Illustrator 2026 已安装、授权并能启动。
 
-## Workflow selection
+VPN、账号和许可证无法自动确认时，用中文请客户确认。缺少前置条件时停止作图，只说明缺少项和解决办法。
 
-For deployment or diagnostics, read [references/deployment.md](references/deployment.md).
+## 作图入口
 
-For texture processing, parameter recording, output, or UAT, read [references/texture-workflow.md](references/texture-workflow.md).
+收到原图后，先调用 `开始端行作图任务`。如果缺参数，仅补问以下必需项：
 
-## Safety invariants
+- 成品宽高（mm）和 DPI。
+- 拼接方式：不拼接、平铺或 1/2 错位。
+- 输出格式及复核人。
 
-- Never overwrite the supplied original. Open or create a working copy first.
-- Confirm the output directory, target physical size, DPI, file format, and required pixel/vector deliverables before execution.
-- Use business-level MCP tools for normal work. Arbitrary Photoshop JavaScript remains disabled by default and may be enabled only for an authorized development session.
-- Keep deterministic checks such as dimensions, DPI, file naming, format, and version identity outside generative judgment.
-- Treat AI-generated or modified images as design-assistance output. Require the customer's designated design/process/quality reviewer before production release.
-- Stop after a failed step; preserve the latest valid checkpoint and report a retry, rollback, or manual route.
+工具会自动生成工作副本、中文目录、目标像素和 `task.json`。后续只能打开返回的“工作副本”，禁止直接打开原图进行修改。
+
+部署或诊断时读取 [references/deployment.md](references/deployment.md)。纹理处理、参数记录、输出或 UAT 时读取 [references/texture-workflow.md](references/texture-workflow.md)。
+
+## 生产安全底线
+
+- 永不覆盖客户原图。
+- 正常生产只用业务级工具；任意 Photoshop JavaScript 默认关闭。
+- 尺寸、DPI、格式、命名和版本必须由程序确定性检查，不能靠 AI 猜测。
+- AI 输出只是设计辅助结果，必须由指定人员人工复核。
+- 失败后立即停止，保留最后一个有效版本，用中文给出“重试、回退或人工处理”选项。
+- 未调用 `保存复核结论` 并记录“已批准，可导出生产版”前，不得称为生产版。

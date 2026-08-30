@@ -1,5 +1,28 @@
 # Photoshop MCP Server
 
+## 端行中文作图插件
+
+本仓库已经集成 `duanxing-creative-automation` Codex 插件。端行员工不需要学习英文命令、MCP、COM 或 Photoshop 脚本，只需在 Codex 中用中文描述任务。
+
+必备条件：已购买可用的 GPT 服务，已安装并登录 Codex，已安装并激活 Photoshop 2026 与 Illustrator 2026。
+
+最简单的开始方式：
+
+> 检查端行作图环境。
+
+> 开始处理这张图：成品 200×200 mm，2540 DPI，做平铺无缝，输出 TIFF，复核人张三，不要覆盖原图。
+
+中文资料：
+
+- [端行客户使用手册](docs/端行客户使用手册.md)
+- [端行中文口令卡](docs/端行中文口令卡.md)
+- [产品需求文档](PRD.md)
+- [项目实施流程](IMPLEMENTATION_WORKFLOW.md)
+
+插件源码位于 `plugins/duanxing-creative-automation`。正常生产模式默认禁止任意 Photoshop JavaScript，只允许经过封装的业务级流程。
+
+---
+
 🌐 **Language**: **English** | [한국어](README.ko.md)
 
 A [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that enables AI assistants to control Adobe Photoshop via Windows COM automation. Built with .NET 10 and C# 14 using the official [MCP C# SDK](https://github.com/modelcontextprotocol/csharp-sdk).

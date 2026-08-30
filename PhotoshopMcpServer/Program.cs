@@ -12,6 +12,7 @@ builder.Logging.AddConsole(consoleLogOptions =>
 
 builder.Services.AddSingleton<IPhotoshopService, PhotoshopService>();
 builder.Services.AddSingleton<IIllustratorService, IllustratorService>();
+builder.Services.AddSingleton<ITaskWorkspaceService, TaskWorkspaceService>();
 
 builder.Services
     .AddMcpServer()
