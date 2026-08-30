@@ -40,6 +40,8 @@ public class WorkflowSelfTestRunnerTests : IDisposable
         File.ReadAllText(source).Should().Be("original");
         File.Exists(result.WorkingCopy).Should().BeTrue();
         File.Exists(result.ReviewFile).Should().BeTrue();
+        File.Exists(result.PreviewFile).Should().BeTrue();
+        Path.GetExtension(result.PreviewFile).Should().Be(".png");
         File.Exists(result.ProductionFile).Should().BeTrue();
         File.Exists(result.DeliveryReport).Should().BeTrue();
         File.ReadAllText(result.DeliveryReport).Should().Contain("材料齐全，等待双方签字");

@@ -50,6 +50,7 @@ Write-Host '端行完整作图流程自检通过。' -ForegroundColor Green
 Write-Host '原图保护：通过，校验值保持不变'
 Write-Host "工作副本：$($workflowResult.WorkingCopy)"
 Write-Host "平铺检查版：$($workflowResult.ReviewFile)"
+Write-Host "Codex 复核预览：$($workflowResult.PreviewFile)"
 Write-Host "复核状态：$($workflowResult.ReviewStatus)"
 Write-Host "TIFF 生产版：$($workflowResult.ProductionFile)"
 Write-Host "中文交付报告：$($workflowResult.DeliveryReport)"

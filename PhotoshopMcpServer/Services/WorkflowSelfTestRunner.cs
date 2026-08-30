@@ -33,6 +33,15 @@ public sealed class WorkflowSelfTestRunner(
             .FirstOrDefault();
         if (reviewFile == null)
             throw new InvalidOperationException($"没有生成 Photoshop 检查版：{previewMessage}");
+        var reviewPreviewMessage = tools.生成复核预览图(taskDirectory);
+        var previewDirectory = Path.Combine(taskDirectory, "03_复核记录", "预览图");
+        var previewFile = Directory.Exists(previewDirectory)
+            ? Directory.GetFiles(previewDirectory, "*.png")
+                .OrderByDescending(File.GetLastWriteTimeUtc)
+                .FirstOrDefault()
+            : null;
+        if (previewFile == null)
+            throw new InvalidOperationException($"没有生成 Codex 复核预览：{reviewPreviewMessage}");
 
         var review = taskWorkspaceService.SaveReview(
             taskDirectory,
@@ -66,6 +75,7 @@ public sealed class WorkflowSelfTestRunner(
         {
             "已建立中文任务目录并创建工作副本。",
             "已生成平铺检查版并绑定人工复核记录。",
+            "已生成可在 Codex 中直接查看的轻量复核预览。",
             "已导出 TIFF 生产版。",
             "已生成材料齐全的中文 POC 交付报告。",
             "原图 SHA256 保持不变。",
@@ -79,6 +89,7 @@ public sealed class WorkflowSelfTestRunner(
             sourceUnchanged,
             task.WorkingCopy,
             reviewFile,
+            previewFile,
             productionFile,
             deliveryReport.ReportFile,
             review.Status,

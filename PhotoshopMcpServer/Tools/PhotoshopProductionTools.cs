@@ -169,6 +169,63 @@ public class PhotoshopProductionTools(
         }
     }
 
+    [McpServerTool(Name = "duanxing_create_review_preview")]
+    [Description(
+        "把当前任务最新处理结果生成轻量 PNG 复核预览，供 Codex 直接展示。" +
+        "只读取并复制结果，不修改原结果，不把预览当作生产文件。")]
+    public string 生成复核预览图(
+        [Description("当前端行任务目录。")]
+        string 任务目录,
+        [Description("预览图最长边像素，默认 1600；通常无需客户填写。")]
+        int 最长边像素 = 1600)
+    {
+        try
+        {
+            if (最长边像素 is < 800 or > 4000)
+                throw new ArgumentOutOfRangeException(
+                    nameof(最长边像素),
+                    "预览图最长边必须在 800 到 4000 像素之间。");
+            var summary = taskWorkspaceService.BuildReviewSummary(任务目录);
+            if (string.IsNullOrWhiteSpace(summary.LatestResultFile) ||
+                !File.Exists(summary.LatestResultFile))
+                return "还没有可预览的处理结果，请先生成检查版。";
+
+            var previewDirectory = Path.Combine(
+                Path.GetFullPath(任务目录),
+                "03_复核记录",
+                "预览图");
+            Directory.CreateDirectory(previewDirectory);
+            var outputPath = Path.Combine(
+                previewDirectory,
+                $"复核预览_{DateTime.Now:yyyyMMdd-HHmmss-fff}.png");
+            var script = "(function(){" +
+                $"var source=app.open(new File(\"{EscapePath(summary.LatestResultFile)}\"));" +
+                "var preview=source.duplicate('端行复核预览',true);" +
+                "source.close(SaveOptions.DONOTSAVECHANGES);app.activeDocument=preview;" +
+                "try{if(preview.mode!=DocumentMode.RGB){preview.changeMode(ChangeMode.RGB);}}catch(e){}" +
+                "try{preview.bitsPerChannel=BitsPerChannelType.EIGHT;}catch(e){}" +
+                "var w=preview.width.as('px'),h=preview.height.as('px');" +
+                $"var maxEdge={最长边像素};" +
+                "if(w>maxEdge||h>maxEdge){if(w>=h){preview.resizeImage(UnitValue(maxEdge,'px'),null,null,ResampleMethod.BICUBICSHARPER);}" +
+                "else{preview.resizeImage(null,UnitValue(maxEdge,'px'),null,ResampleMethod.BICUBICSHARPER);}}" +
+                "var options=new ExportOptionsSaveForWeb();options.format=SaveDocumentType.PNG;" +
+                "options.PNG8=false;options.transparency=true;" +
+                $"preview.exportDocument(new File(\"{EscapePath(outputPath)}\"),ExportType.SAVEFORWEB,options);" +
+                "preview.close(SaveOptions.DONOTSAVECHANGES);" +
+                $"return \"{EscapeJavaScript(outputPath)}\";" +
+                "})();";
+            var result = photoshopService.ExecuteJavaScriptWithResult(script);
+            if (!result.Success)
+                return $"复核预览生成失败：{result.ErrorMessage}";
+            return $"复核预览已生成：{outputPath}\n" +
+                "请直接显示这张图片，并提醒客户预览仅用于看效果，不是生产文件。";
+        }
+        catch (Exception exception)
+        {
+            return $"无法生成复核预览：{exception.Message}";
+        }
+    }
+
     [McpServerTool(Name = "duanxing_create_extension_canvas")]
     [Description(
         "创建补图/扩展画布：按任务记录的目标像素扩展 Photoshop 工作副本画布，" +

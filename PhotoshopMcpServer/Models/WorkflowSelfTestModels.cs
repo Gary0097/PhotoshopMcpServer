@@ -8,6 +8,7 @@ public record WorkflowSelfTestResult(
     bool SourceUnchanged,
     string WorkingCopy,
     string ReviewFile,
+    string PreviewFile,
     string ProductionFile,
     string DeliveryReport,
     string ReviewStatus,

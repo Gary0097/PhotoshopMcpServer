@@ -246,6 +246,64 @@ public class PhotoshopProductionToolsTests
                 script.Contains("applyUnSharpMask(80,1.2,2)"))));
     }
 
+    [Fact]
+    public void CreateReviewPreview_UsesLatestResultAndDoesNotChangeProductionResult()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "duanxing-review-preview", Guid.NewGuid().ToString("N"));
+        try
+        {
+            var taskDirectory = Path.Combine(root, "task");
+            var resultDirectory = Path.Combine(taskDirectory, "02_处理结果");
+            Directory.CreateDirectory(resultDirectory);
+            var resultFile = Path.Combine(resultDirectory, "待复核.psd");
+            File.WriteAllText(resultFile, "result");
+            _taskWorkspaceService.Setup(service => service.BuildReviewSummary(taskDirectory))
+                .Returns(new DuanxingReviewSummary(
+                    "DX-test", taskDirectory, resultFile, 1, 0, string.Empty,
+                    true, true, false, "尚未复核", []));
+            _photoshopService.Setup(service => service.ExecuteJavaScriptWithResult(It.IsAny<string>()))
+                .Returns(new PhotoshopScriptResult(true, "ok", string.Empty));
+            var tools = new PhotoshopProductionTools(
+                _photoshopService.Object,
+                _taskWorkspaceService.Object);
+
+            var message = tools.生成复核预览图(taskDirectory);
+
+            message.Should().Contain("复核预览已生成");
+            message.Should().Contain("03_复核记录");
+            File.ReadAllText(resultFile).Should().Be("result");
+            _photoshopService.Verify(service => service.ExecuteJavaScriptWithResult(
+                It.Is<string>(script =>
+                    script.Contains("source.duplicate") &&
+                    script.Contains("DONOTSAVECHANGES") &&
+                    script.Contains("ExportOptionsSaveForWeb") &&
+                    script.Contains("maxEdge=1600"))));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+                Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void CreateReviewPreview_WithoutResult_DoesNotCallPhotoshop()
+    {
+        _taskWorkspaceService.Setup(service => service.BuildReviewSummary("task"))
+            .Returns(new DuanxingReviewSummary(
+                "DX-test", "task", string.Empty, 0, 0, string.Empty,
+                true, true, false, "尚未复核", []));
+        var tools = new PhotoshopProductionTools(
+            _photoshopService.Object,
+            _taskWorkspaceService.Object);
+
+        tools.生成复核预览图("task").Should().Contain("先生成检查版");
+
+        _photoshopService.Verify(
+            service => service.ExecuteJavaScriptWithResult(It.IsAny<string>()),
+            Times.Never);
+    }
+
     private static DuanxingTaskRecord CreateTask(string outputDirectory = @"D:\输出\任务\02_处理结果")
         => new(
             "DX-test",
