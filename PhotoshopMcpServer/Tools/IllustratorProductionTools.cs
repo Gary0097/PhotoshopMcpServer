@@ -10,7 +10,7 @@ public class IllustratorProductionTools(
     IIllustratorService illustratorService,
     ITaskWorkspaceService taskWorkspaceService)
 {
-    [McpServerTool(Name = "duanxing_create_straight_refraction_lines")]
+    [McpServerTool(Name = "duanxing_create_straight_refraction_lines", Title = "生成直线折光线")]
     [Description(
         "按端行任务尺寸在 Illustrator 2026 中生成可编辑的直线折光线 AI 文件。" +
         "线宽、间距和角度均使用毫米/度数输入，输出自动保存在任务结果目录。")]
@@ -50,7 +50,7 @@ public class IllustratorProductionTools(
         }
     }
 
-    [McpServerTool(Name = "duanxing_create_s_wave_refraction_lines")]
+    [McpServerTool(Name = "duanxing_create_s_wave_refraction_lines", Title = "生成S型折光线")]
     [Description(
         "按端行任务尺寸在 Illustrator 2026 中生成可编辑的 S 型折光线 AI 文件。" +
         "支持线宽、行距、振幅、波长和整体角度，输出自动保存在任务结果目录。")]
@@ -101,7 +101,7 @@ public class IllustratorProductionTools(
         }
     }
 
-    [McpServerTool(Name = "duanxing_trace_wave_reference")]
+    [McpServerTool(Name = "duanxing_trace_wave_reference", Title = "提取原图波纹矢量")]
     [Description(
         "从端行任务原图提取大尺度波纹，生成可编辑 AI 和 SVG 矢量候选。" +
         "自动降低描摹分辨率并过滤细密底纹，适合客户说“把原图波纹做成矢量”时使用；" +

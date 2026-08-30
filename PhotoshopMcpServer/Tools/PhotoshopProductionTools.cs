@@ -9,7 +9,7 @@ public class PhotoshopProductionTools(
     IPhotoshopService photoshopService,
     ITaskWorkspaceService taskWorkspaceService)
 {
-    [McpServerTool(Name = "duanxing_open_working_copy")]
+    [McpServerTool(Name = "duanxing_open_working_copy", Title = "打开任务工作副本")]
     [Description("在 Photoshop 2026 中打开端行任务的工作副本。只接受包含 task.json 的有效任务目录。")]
     public string 打开任务工作副本(
         [Description("端行任务目录，例如 D:\\端行输出\\DX-任务编号_木纹无缝。")]
@@ -30,7 +30,7 @@ public class PhotoshopProductionTools(
         }
     }
 
-    [McpServerTool(Name = "duanxing_set_production_dimensions")]
+    [McpServerTool(Name = "duanxing_set_production_dimensions", Title = "按任务规格设置尺寸")]
     [Description(
         "按照任务中确认的毫米尺寸和 DPI 设置当前 Photoshop 工作副本的像素尺寸，" +
         "使用双三次重采样，并把结果另存为任务目录中的规格化 PSD。")]
@@ -65,7 +65,7 @@ public class PhotoshopProductionTools(
         }
     }
 
-    [McpServerTool(Name = "duanxing_create_seamless_check")]
+    [McpServerTool(Name = "duanxing_create_seamless_check", Title = "生成平铺无缝检查图")]
     [Description(
         "为端行任务生成平铺无缝检查图：复制工作副本，将图层水平和垂直各偏移一半并环绕，" +
         "把原来的四边接缝移动到画面中央，便于人工检查和修补。不会覆盖原图。")]
@@ -102,7 +102,7 @@ public class PhotoshopProductionTools(
         }
     }
 
-    [McpServerTool(Name = "duanxing_create_half_drop_check")]
+    [McpServerTool(Name = "duanxing_create_half_drop_check", Title = "生成二分之一错位检查图")]
     [Description(
         "为端行任务生成 1/2 错位拼接检查图：建立 2×2 画布，右列上下错开半个图案高度，" +
         "用于检查二分之一错位后的接缝和连续性。不会覆盖原图。")]
@@ -145,7 +145,7 @@ public class PhotoshopProductionTools(
         }
     }
 
-    [McpServerTool(Name = "duanxing_create_task_preview")]
+    [McpServerTool(Name = "duanxing_create_task_preview", Title = "一键生成工艺检查版")]
     [Description(
         "一键生成端行工艺检查版。自动读取任务尺寸、DPI 和拼接方式：" +
         "不拼接时生成规格化 PSD，平铺时生成无缝检查图，1/2 错位时生成错位检查图。")]
@@ -169,7 +169,7 @@ public class PhotoshopProductionTools(
         }
     }
 
-    [McpServerTool(Name = "duanxing_create_review_preview")]
+    [McpServerTool(Name = "duanxing_create_review_preview", Title = "生成复核预览图")]
     [Description(
         "把当前任务最新处理结果生成轻量 PNG 复核预览，供 Codex 直接展示。" +
         "只读取并复制结果，不修改原结果，不把预览当作生产文件。")]
@@ -224,7 +224,7 @@ public class PhotoshopProductionTools(
         }
     }
 
-    [McpServerTool(Name = "duanxing_create_extension_canvas")]
+    [McpServerTool(Name = "duanxing_create_extension_canvas", Title = "创建补图扩展画布")]
     [Description(
         "创建补图/扩展画布：按任务记录的目标像素扩展 Photoshop 工作副本画布，" +
         "保留原图内容并把新增透明区域留给 AI 补图或人工修补。不会覆盖原图。")]
@@ -264,7 +264,7 @@ public class PhotoshopProductionTools(
         }
     }
 
-    [McpServerTool(Name = "duanxing_create_sharpen_preview")]
+    [McpServerTool(Name = "duanxing_create_sharpen_preview", Title = "生成基础清晰化预览")]
     [Description(
         "生成基础清晰化预览：在工作副本上复制图层并使用 Photoshop USM 锐化，" +
         "保留原始图层以便对比和回退。适合先做小样，不代表 AI 修复。")]
@@ -310,7 +310,7 @@ public class PhotoshopProductionTools(
         }
     }
 
-    [McpServerTool(Name = "duanxing_check_export_approval")]
+    [McpServerTool(Name = "duanxing_check_export_approval", Title = "检查是否允许导出", ReadOnly = true)]
     [Description("检查端行任务是否已通过人工复核。未通过时禁止称为生产版或执行最终交付。")]
     public string 检查是否允许导出生产版(
         [Description("包含 task.json 的端行任务目录。")]
@@ -328,7 +328,7 @@ public class PhotoshopProductionTools(
         }
     }
 
-    [McpServerTool(Name = "duanxing_export_approved_production_file")]
+    [McpServerTool(Name = "duanxing_export_approved_production_file", Title = "导出已批准生产版")]
     [Description(
         "把已经通过人工复核的 Photoshop 结果导出为生产版。" +
         "源文件必须位于当前任务的处理结果目录，生产版固定保存到该任务的“04_生产版”目录。")]
@@ -392,7 +392,7 @@ public class PhotoshopProductionTools(
         }
     }
 
-    [McpServerTool(Name = "duanxing_export_approved_simple")]
+    [McpServerTool(Name = "duanxing_export_approved_simple", Title = "一键导出生产版")]
     [Description(
         "一键导出已经批准的 Photoshop 生产版。客户不需要提供结果文件路径；系统自动使用复核时锁定的文件，默认沿用任务输出格式。")]
     public string 一键导出生产版(

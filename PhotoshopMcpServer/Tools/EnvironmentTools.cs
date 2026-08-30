@@ -14,7 +14,7 @@ public class EnvironmentTools(
     private const string DefaultPhotoshopPath = @"K:\TOOL\Adobe Photoshop 2026";
     private const string DefaultIllustratorPath = @"K:\TOOL\Adobe Illustrator 2026";
 
-    [McpServerTool(Name = "duanxing_check_environment", ReadOnly = true)]
+    [McpServerTool(Name = "duanxing_check_environment", Title = "检查作图环境", ReadOnly = true)]
     [Description(
         "用中文检查端行作图环境：Codex、Photoshop 2026、Illustrator 2026、运行状态和脚本安全模式。" +
         "GPT 购买/登录、VPN 和 Adobe 授权需要客户人工确认。")]

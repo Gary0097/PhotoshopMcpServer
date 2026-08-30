@@ -9,7 +9,7 @@ namespace PhotoshopMcpServer.Tools;
 [McpServerToolType]
 public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
 {
-    [McpServerTool(Name = "duanxing_prepare_task")]
+    [McpServerTool(Name = "duanxing_prepare_task", Title = "建立作图任务")]
     [Description(
         "开始一个端行作图任务：自动保护原图、创建中文任务目录、生成工作副本、换算毫米和 DPI 对应像素，并保存任务记录。" +
         "在任何纹理处理、无缝拼接、折光线或生产导出前优先调用。")]
@@ -142,7 +142,7 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
         }
     }
 
-    [McpServerTool(Name = "duanxing_continue_latest_task")]
+    [McpServerTool(Name = "duanxing_continue_latest_task", Title = "查找这张图的任务", ReadOnly = true)]
     [Description(
         "继续这张原图最近一次的端行任务，不需要客户提供任务目录。" +
         "自动在原图旁的“端行作图输出”中查找，并返回中文任务状态和下一步。")]
@@ -165,7 +165,7 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
         }
     }
 
-    [McpServerTool(Name = "duanxing_continue_most_recent_task")]
+    [McpServerTool(Name = "duanxing_continue_most_recent_task", Title = "查看最近任务进度", ReadOnly = true)]
     [Description(
         "继续这台电脑上最近一次端行任务。客户只说“继续上次”时调用，" +
         "不需要重新拖入原图，也不需要提供任务编号或目录。")]
@@ -186,7 +186,7 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
         }
     }
 
-    [McpServerTool(Name = "duanxing_save_review")]
+    [McpServerTool(Name = "duanxing_save_review", Title = "保存复核结论")]
     [Description("保存端行人工复核结论。只有明确批准后，任务才可以导出为生产版。")]
     public string 保存复核结论(
         [Description("包含 task.json 的端行任务目录。")]
@@ -221,7 +221,7 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
         }
     }
 
-    [McpServerTool(Name = "duanxing_get_review_card")]
+    [McpServerTool(Name = "duanxing_get_review_card", Title = "生成中文复核单")]
     [Description(
         "生成客户看得懂的中文复核单：汇总最新结果、原图保护、AI 记录、当前批准状态和必须人工检查的项目。" +
         "展示后只让客户回答“通过并导出”或“退回修改”。")]
@@ -264,7 +264,7 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
         }
     }
 
-    [McpServerTool(Name = "duanxing_register_ai_result")]
+    [McpServerTool(Name = "duanxing_register_ai_result", Title = "登记智能作图结果")]
     [Description(
         "把 Codex AI 生成或编辑后的图片安全纳入端行任务：复制到处理结果目录、记录提示词和校验值，并让旧复核自动失效。" +
         "AI 补图、清晰修复或纹理生成完成后必须调用。")]
@@ -304,7 +304,7 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
         }
     }
 
-    [McpServerTool(Name = "duanxing_generate_delivery_report")]
+    [McpServerTool(Name = "duanxing_generate_delivery_report", Title = "生成中文交付报告")]
     [Description(
         "一键生成端行中文 POC、UAT 或正式交付报告，自动汇总任务规格、原图保护、处理结果、AI 记录、复核和生产文件，并预留双方签字项。")]
     public string 生成中文交付报告(
@@ -338,7 +338,7 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
         }
     }
 
-    [McpServerTool(Name = "duanxing_restore_previous_result")]
+    [McpServerTool(Name = "duanxing_restore_previous_result", Title = "回到上一版")]
     [Description(
         "安全回到当前任务的上一版处理结果。不会删除或覆盖任何文件，" +
         "会复制上一版成为新的当前结果、记录操作并让旧审批失效。")]
@@ -367,7 +367,7 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
         }
     }
 
-    [McpServerTool(Name = "duanxing_get_chinese_prompts")]
+    [McpServerTool(Name = "duanxing_get_chinese_prompts", Title = "查看中文作图口令", ReadOnly = true)]
     [Description("返回端行员工三句中文作图口令。用户说“帮助”“怎么用”或还没有任何任务时调用。")]
     public string 获取中文作图口令()
         => """

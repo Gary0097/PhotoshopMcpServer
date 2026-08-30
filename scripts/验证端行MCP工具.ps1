@@ -117,6 +117,10 @@ try {
         throw '工具列表中存在重复项目，请联系实施人员。'
     }
     foreach ($tool in $tools) {
+        if ([string]::IsNullOrWhiteSpace($tool.title) -or
+            $tool.title -notmatch '[\u4e00-\u9fff]') {
+            throw '发现没有中文显示标题的工具，客户确认框可能出现英文，请联系实施人员。'
+        }
         if ([string]::IsNullOrWhiteSpace($tool.description) -or
             $tool.description -notmatch '[\u4e00-\u9fff]') {
             throw '发现没有中文说明的工具，请联系实施人员。'
@@ -129,6 +133,32 @@ try {
             if ($parameterName -notmatch '[\u4e00-\u9fff]') {
                 throw '发现不是中文的参数名称，请联系实施人员。'
             }
+        }
+    }
+    $readOnlyTools = @(
+        'duanxing_check_environment',
+        'duanxing_list_presets',
+        'duanxing_continue_latest_task',
+        'duanxing_continue_most_recent_task',
+        'duanxing_get_chinese_prompts',
+        'duanxing_check_export_approval'
+    )
+    foreach ($name in $readOnlyTools) {
+        $tool = $tools | Where-Object { $_.name -eq $name } | Select-Object -First 1
+        if ($tool.annotations.readOnlyHint -ne $true) {
+            throw '只读工具没有正确标记，可能向客户显示多余确认。'
+        }
+    }
+    $writeTools = @(
+        'duanxing_make_this_image',
+        'duanxing_approve_and_export_latest',
+        'duanxing_batch_approve_and_export',
+        'duanxing_export_latest_approved'
+    )
+    foreach ($name in $writeTools) {
+        $tool = $tools | Where-Object { $_.name -eq $name } | Select-Object -First 1
+        if ($tool.annotations.readOnlyHint -eq $true) {
+            throw '写入或导出工具被错误标成只读，安全确认可能失效。'
         }
     }
     Send-ProtocolMessage @{
@@ -175,7 +205,8 @@ try {
     Write-Host 'Codex 工具列表检查通过。' -ForegroundColor Green
     Write-Host "客户模式工具数量：$($tools.Count)"
     Write-Host '“做这张”、“按端行样板做”、波纹矢量、通过并导出等入口均正常。'
-    Write-Host '所有工具说明和参数名称均为中文，三句口令帮助和首次规格引导均可正常调用。'
+    Write-Host '所有工具标题、说明和参数名称均为中文，三句口令帮助和首次规格引导均可正常调用。'
+    Write-Host '只读检查不会多余确认，改图和导出仍保留安全确认。'
     Write-Host '底层任意脚本和旧的不完整入口均未加载。'
 }
 finally {

@@ -10,7 +10,7 @@ public class DuanxingQuickActionTools(
     ITaskWorkspaceService taskWorkspaceService,
     IPhotoshopService photoshopService)
 {
-    [McpServerTool(Name = "duanxing_make_this_image")]
+    [McpServerTool(Name = "duanxing_make_this_image", Title = "做这张图")]
     [Description(
         "端行员工最优先使用的一句话作图入口。客户拖入原图后只说“做这张”时调用：" +
         "有最近任务就沿用缺少的规格并直接生成检查版和预览；首次使用则一次性提示需要补充的四项生产信息。" +
@@ -78,7 +78,7 @@ public class DuanxingQuickActionTools(
         }
     }
 
-    [McpServerTool(Name = "duanxing_save_recent_as_preset")]
+    [McpServerTool(Name = "duanxing_save_recent_as_preset", Title = "记住最近规格")]
     [Description(
         "把最近任务已经确认的宽高、印刷精度、拼接方式、输出格式和复核人记成中文规格模板。" +
         "客户说“记住这个规格叫木纹”时调用，以后不必重复输入数字。")]
@@ -106,7 +106,7 @@ public class DuanxingQuickActionTools(
         }
     }
 
-    [McpServerTool(Name = "duanxing_list_presets")]
+    [McpServerTool(Name = "duanxing_list_presets", Title = "查看规格模板", ReadOnly = true)]
     [Description("查看这台电脑已经保存的中文规格模板。客户说“有哪些规格”“查看规格模板”时调用。")]
     public string 查看规格模板()
     {
@@ -136,7 +136,7 @@ public class DuanxingQuickActionTools(
         }
     }
 
-    [McpServerTool(Name = "duanxing_start_from_preset_and_run")]
+    [McpServerTool(Name = "duanxing_start_from_preset_and_run", Title = "按规格模板做这张")]
     [Description(
         "按客户点名的中文规格模板处理新原图，一次完成原图保护、任务建立、检查版、预览和中文复核单。" +
         "客户说“按木纹做这张”时调用，不使用可能属于其他产品的最近规格。")]
@@ -169,7 +169,7 @@ public class DuanxingQuickActionTools(
         }
     }
 
-    [McpServerTool(Name = "duanxing_batch_start_from_preset")]
+    [McpServerTool(Name = "duanxing_batch_start_from_preset", Title = "按规格模板批量做图")]
     [Description(
         "把客户一次拖入的 2 到 20 张原图按同一个中文规格模板逐张处理。" +
         "每张图都独立保护原图、建立任务、生成检查版、预览和复核单；部分失败不会影响其他成功项。")]
@@ -243,7 +243,7 @@ public class DuanxingQuickActionTools(
         }
     }
 
-    [McpServerTool(Name = "duanxing_batch_approve_and_export")]
+    [McpServerTool(Name = "duanxing_batch_approve_and_export", Title = "这批都通过并导出")]
     [Description(
         "客户逐张查看批量预览后明确说“这批都通过并导出”时调用。" +
         "使用批量作图返回的任务目录逐项绑定批准校验值并导出；禁止询问客户目录，禁止在未明确全部通过时调用。")]
@@ -312,7 +312,7 @@ public class DuanxingQuickActionTools(
         }
     }
 
-    [McpServerTool(Name = "duanxing_start_and_run")]
+    [McpServerTool(Name = "duanxing_start_and_run", Title = "开始并生成检查版")]
     [Description(
         "一键开始端行作图：保护客户原图、建立中文任务、生成工艺检查版和复核预览。" +
         "客户只需提供原图、成品宽高、印刷精度和复核人；默认平铺并输出 TIFF。")]
@@ -360,7 +360,7 @@ public class DuanxingQuickActionTools(
         }
     }
 
-    [McpServerTool(Name = "duanxing_start_like_recent_and_run")]
+    [McpServerTool(Name = "duanxing_start_like_recent_and_run", Title = "照上次规格做")]
     [Description(
         "把客户刚拖入的新图照最近任务规格一键处理：自动沿用成品宽高、印刷精度、" +
         "拼接方式、输出格式和复核人，并完成原图保护、任务建立、检查版和预览。")]
@@ -391,7 +391,7 @@ public class DuanxingQuickActionTools(
         }
     }
 
-    [McpServerTool(Name = "duanxing_show_latest_result")]
+    [McpServerTool(Name = "duanxing_show_latest_result", Title = "给我看结果")]
     [Description("显示最近端行任务的复核预览。客户只需说“给我看结果”，不需要提供任务目录或文件位置。")]
     public string 查看最近结果()
     {
@@ -409,7 +409,7 @@ public class DuanxingQuickActionTools(
         }
     }
 
-    [McpServerTool(Name = "duanxing_approve_latest_result")]
+    [McpServerTool(Name = "duanxing_approve_latest_result", Title = "通过当前结果")]
     [Description(
         "批准最近端行任务的最新处理结果。客户明确说“通过”时调用，" +
         "自动使用任务中登记的复核人并绑定当前文件校验值。")]
@@ -435,7 +435,7 @@ public class DuanxingQuickActionTools(
         }
     }
 
-    [McpServerTool(Name = "duanxing_approve_and_export_latest")]
+    [McpServerTool(Name = "duanxing_approve_and_export_latest", Title = "通过并导出")]
     [Description(
         "把人工复核通过和生产导出合并为一次安全操作。客户看完预览后明确说“通过并导出”时调用；" +
         "自动把批准绑定到最近结果及校验值，再按任务格式导出生产版。未明确通过时禁止调用。")]
@@ -475,7 +475,7 @@ public class DuanxingQuickActionTools(
         }
     }
 
-    [McpServerTool(Name = "duanxing_reject_latest_result")]
+    [McpServerTool(Name = "duanxing_reject_latest_result", Title = "退回修改")]
     [Description(
         "退回最近端行任务的最新处理结果。客户说“退回修改”时调用，" +
         "只需填写客户说的具体修改要求，不需要任务目录或复核人。")]
@@ -505,7 +505,7 @@ public class DuanxingQuickActionTools(
         }
     }
 
-    [McpServerTool(Name = "duanxing_export_latest_approved")]
+    [McpServerTool(Name = "duanxing_export_latest_approved", Title = "导出最近生产版")]
     [Description(
         "导出最近端行任务已经批准的生产版。客户只需说“直接导出生产版”，" +
         "系统自动使用批准文件、任务格式和生产目录。")]
@@ -525,7 +525,7 @@ public class DuanxingQuickActionTools(
         }
     }
 
-    [McpServerTool(Name = "duanxing_continue_and_run")]
+    [McpServerTool(Name = "duanxing_continue_and_run", Title = "继续上次")]
     [Description(
         "一键继续最近的端行任务：等待处理时生成检查版和预览，等待复核时重新显示预览，" +
         "复核通过时导出生产版。遇到退回修改、原图异常或已经完成时不会擅自处理。")]
