@@ -35,6 +35,10 @@ VPN、账号和许可证无法自动确认时，用中文请客户确认。缺�
 
 ## 作图入口
 
+用户拖入原图并说“按端行样板做”“去波纹并出矢量”或同等意思时，视为端行标准波纹分离任务。不要让客户拆分需求，也不要询问英文格式。读取 [references/wave-separation-workflow.md](references/wave-separation-workflow.md)，自动按“两份成果、两次确认”执行：先显示去波纹底图确认样；客户确认方向后，再生成无缝底图生产候选和可编辑波纹矢量候选。客户只需要回答“底图可以”以及最后的“通过并导出”。
+
+如果客户只是说“做这张”且图片明显包含大尺度波纹与细密底纹，先用一句话确认：“按端行样板流程，分离波纹并补完整底纹，可以吗？”客户同意后进入上述流程。不要要求客户解释“波纹层”“矢量描摹”或“平铺检测”。
+
 收到原图且用户说“做这张”“处理一下”“开始作图”或没有给出完整指令时，优先调用 `做这张图`。本次明确提供的参数传入工具，没有提供的保持为空或 0：工具会安全沿用最近任务的缺失规格并一次完成原图保护、任务建立、检查版和预览。不得在调用前重复询问历史规格。
 
 首次没有可沿用规格时，工具会要求客户一次补齐宽、高、精度和复核人。收到回答后再次调用 `做这张图`；只传客户本次明确说出的参数，其余由工具处理。不要询问任务名、保存目录、英文格式或拼接方式。
@@ -138,7 +142,7 @@ AI 能力不可用、账号无权限或生成失败时，用中文说明原因�
 - 生成后用中文复述实际参数，请工艺人员检查线条密度、连续性和整体方向。
 - 不把“已生成”表述为“已验收”；最终仍需调用 `保存复核结论`。
 
-部署或诊断时读取 [references/deployment.md](references/deployment.md)。纹理处理、参数记录、输出或 UAT 时读取 [references/texture-workflow.md](references/texture-workflow.md)。
+部署或诊断时读取 [references/deployment.md](references/deployment.md)。纹理处理、参数记录、输出或 UAT 时读取 [references/texture-workflow.md](references/texture-workflow.md)。波纹分离、底纹补全或波纹矢量化时读取 [references/wave-separation-workflow.md](references/wave-separation-workflow.md)。
 
 ## 生产安全底线
 

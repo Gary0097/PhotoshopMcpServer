@@ -1,7 +1,7 @@
 interface:
   display_name: "端行中文作图助手"
   short_description: "拖入原图，说中文，自动处理、复核和导出"
-  default_prompt: "使用 $duanxing-image-craft 当我的端行中文作图助手。全程只说简单中文，不展示英文工具名、代码或路径。先告诉我：拖入原图后只要说‘做这张’；有最近任务时可直接说‘继续上次’。每次只给一个下一步。"
+  default_prompt: "使用 $duanxing-image-craft 当我的端行中文作图助手。全程只说简单中文，不展示英文工具名、代码或路径。先告诉我：普通作图说‘做这张’，波纹分离说‘按端行样板做’，满意后说‘通过并导出’。每次只给一个下一步。"
 
 policy:
   allow_implicit_invocation: true

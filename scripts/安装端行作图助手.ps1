@@ -100,5 +100,5 @@ Write-Host ''
 Write-Host '安装完成。' -ForegroundColor Green
 Write-Host "版本：$($installResult.version)"
 Write-Host '作图服务健康检查：通过' -ForegroundColor Green
-Write-Host '请关闭当前 Codex 任务，打开一个新任务，然后输入：'
-Write-Host '检查端行作图环境。' -ForegroundColor Yellow
+Write-Host '请关闭当前 Codex 任务，打开一个新任务。'
+Write-Host '拖入原图后，普通作图说“做这张”；波纹样板说“按端行样板做”。' -ForegroundColor Yellow
