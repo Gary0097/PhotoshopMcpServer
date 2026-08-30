@@ -132,6 +132,32 @@ public class DuanxingWorkflowToolsTests : IDisposable
     }
 
     [Fact]
+    public void RestorePreviousResult_ReturnsSimpleChineseNextStep()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var source = Path.Combine(_testRoot, "木纹.png");
+        File.WriteAllText(source, "original");
+        var service = CreateService();
+        var tools = new DuanxingWorkflowTools(service);
+        var prepareJson = tools.极简开始作图(source, 100, 100, 1270, "张三");
+        using var prepareDocument = JsonDocument.Parse(prepareJson);
+        var taskDirectory = prepareDocument.RootElement.GetProperty("任务目录").GetString();
+        var task = service.LoadTask(taskDirectory);
+        File.WriteAllText(Path.Combine(task.OutputDirectory, "第一版.png"), "first");
+        File.SetLastWriteTimeUtc(
+            Path.Combine(task.OutputDirectory, "第一版.png"),
+            DateTime.UtcNow.AddMinutes(-1));
+        File.WriteAllText(Path.Combine(task.OutputDirectory, "第二版.png"), "second");
+
+        var json = tools.回到上一版(taskDirectory);
+
+        using var document = JsonDocument.Parse(json);
+        document.RootElement.GetProperty("成功").GetBoolean().Should().BeTrue();
+        document.RootElement.GetProperty("提示").GetString().Should().Contain("原来的文件都保留");
+        document.RootElement.GetProperty("提示").GetString().Should().Contain("重新复核");
+    }
+
+    [Fact]
     public void ReviewCard_WithoutResult_TellsCustomerWhatToDo()
     {
         Directory.CreateDirectory(_testRoot);

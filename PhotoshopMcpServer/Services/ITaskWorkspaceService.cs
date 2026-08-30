@@ -13,6 +13,7 @@ public interface ITaskWorkspaceService
     string GetApprovedResultFile(string taskDirectory);
     DuanxingReviewSummary BuildReviewSummary(string taskDirectory);
     DuanxingDeliveryReport GenerateDeliveryReport(string taskDirectory, string stage);
+    DuanxingRollbackRecord RestorePreviousResult(string taskDirectory);
     DuanxingAiResultRecord RegisterAiResult(
         string taskDirectory,
         string generatedFile,

@@ -421,6 +421,47 @@ public sealed partial class TaskWorkspaceService : ITaskWorkspaceService
             readyForSignOff ? "材料齐全，等待双方签字" : "材料未齐全，暂不能签字");
     }
 
+    public DuanxingRollbackRecord RestorePreviousResult(string taskDirectory)
+    {
+        var fullTaskDirectory = Path.GetFullPath(taskDirectory);
+        var task = LoadTask(fullTaskDirectory);
+        var resultFiles = Directory.Exists(task.OutputDirectory)
+            ? Directory.GetFiles(task.OutputDirectory)
+                .OrderByDescending(File.GetLastWriteTimeUtc)
+                .ThenByDescending(Path.GetFileName)
+                .ToArray()
+            : [];
+        if (resultFiles.Length < 2)
+            throw new InvalidOperationException("目前没有上一版可以恢复。至少生成两个结果后才能回退。");
+
+        var latestFile = Path.GetFullPath(resultFiles[0]);
+        var previousFile = Path.GetFullPath(resultFiles[1]);
+        var restoredName = $"回到上一版_{DateTime.Now:yyyyMMdd-HHmmss-fff}_" +
+            $"{Guid.NewGuid():N}"[..6] +
+            Path.GetExtension(previousFile).ToLowerInvariant();
+        var restoredFile = Path.Combine(task.OutputDirectory, restoredName);
+        File.Copy(previousFile, restoredFile, overwrite: false);
+
+        SaveReview(
+            fullTaskDirectory,
+            task.Reviewer,
+            false,
+            $"已回到上一版：{Path.GetFileName(previousFile)}。请重新复核。");
+        var record = new DuanxingRollbackRecord(
+            task.TaskId,
+            DateTimeOffset.Now.ToString("O"),
+            latestFile,
+            previousFile,
+            restoredFile,
+            "已恢复上一版，等待人工复核");
+        var operationDirectory = Path.Combine(fullTaskDirectory, "07_操作记录");
+        Directory.CreateDirectory(operationDirectory);
+        WriteJson(
+            Path.Combine(operationDirectory, $"回退-{DateTime.Now:yyyyMMdd-HHmmss-fff}.json"),
+            record);
+        return record;
+    }
+
     private static void AppendFile(
         StringBuilder builder,
         string label,

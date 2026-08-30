@@ -77,3 +77,12 @@ public record DuanxingDeliveryReport(
     bool ReadyForSignOff,
     string Status
 );
+
+public record DuanxingRollbackRecord(
+    string TaskId,
+    string RestoredAt,
+    string AbandonedLatestFile,
+    string PreviousFile,
+    string RestoredFile,
+    string Status
+);

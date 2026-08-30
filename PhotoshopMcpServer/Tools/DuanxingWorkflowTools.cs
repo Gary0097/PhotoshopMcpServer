@@ -362,6 +362,35 @@ public class DuanxingWorkflowTools(ITaskWorkspaceService taskWorkspaceService)
         }
     }
 
+    [McpServerTool(Name = "duanxing_restore_previous_result")]
+    [Description(
+        "安全回到当前任务的上一版处理结果。不会删除或覆盖任何文件，" +
+        "会复制上一版成为新的当前结果、记录操作并让旧审批失效。")]
+    public string 回到上一版(
+        [Description("当前端行任务目录。")]
+        string 任务目录)
+    {
+        try
+        {
+            var record = taskWorkspaceService.RestorePreviousResult(任务目录);
+            return JsonSerializer.Serialize(new
+            {
+                成功 = true,
+                提示 = "已安全回到上一版，原来的文件都保留。请查看恢复结果并重新复核。",
+                恢复结果 = record.RestoredFile,
+                record.Status
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception exception)
+        {
+            return JsonSerializer.Serialize(new
+            {
+                成功 = false,
+                提示 = exception.Message
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+    }
+
     [McpServerTool(Name = "duanxing_get_chinese_prompts")]
     [Description("返回端行员工日常只需使用的四步中文作图菜单。用户说“帮助”“怎么用”或不知道下一步时调用。")]
     public string 获取中文作图口令()

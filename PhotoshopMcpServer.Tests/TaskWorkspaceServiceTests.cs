@@ -361,6 +361,59 @@ public class TaskWorkspaceServiceTests : IDisposable
         File.ReadAllText(report.ReportFile).Should().Contain("生产版：0 个");
     }
 
+    [Fact]
+    public void RestorePreviousResult_CopiesPreviousAndInvalidatesApprovalWithoutDeletingFiles()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var source = Path.Combine(_testRoot, "原图.png");
+        File.WriteAllText(source, "original");
+        var service = CreateService();
+        var task = service.PrepareTask(new DuanxingTaskRequest(
+            source, Path.Combine(_testRoot, "输出"), "安全回退", 100, 100, 1270,
+            "平铺", "TIFF", "张三"));
+        var taskDirectory = Directory.GetParent(task.OutputDirectory)?.FullName
+            ?? throw new InvalidOperationException("Task directory was not created.");
+        var previousFile = Path.Combine(task.OutputDirectory, "第一版.png");
+        var latestFile = Path.Combine(task.OutputDirectory, "第二版.png");
+        File.WriteAllText(previousFile, "first-version");
+        File.SetLastWriteTimeUtc(previousFile, DateTime.UtcNow.AddMinutes(-1));
+        File.WriteAllText(latestFile, "second-version");
+        File.SetLastWriteTimeUtc(latestFile, DateTime.UtcNow);
+        service.SaveReview(taskDirectory, "张三", true, "第二版通过");
+
+        var rollback = service.RestorePreviousResult(taskDirectory);
+
+        File.Exists(previousFile).Should().BeTrue();
+        File.Exists(latestFile).Should().BeTrue();
+        File.Exists(rollback.RestoredFile).Should().BeTrue();
+        File.ReadAllText(rollback.RestoredFile).Should().Be("first-version");
+        rollback.PreviousFile.Should().Be(Path.GetFullPath(previousFile));
+        rollback.AbandonedLatestFile.Should().Be(Path.GetFullPath(latestFile));
+        service.IsApproved(taskDirectory).Should().BeFalse();
+        Directory.GetFiles(Path.Combine(taskDirectory, "07_操作记录"), "回退-*.json")
+            .Should().ContainSingle();
+    }
+
+    [Fact]
+    public void RestorePreviousResult_WithOnlyOneVersion_ReturnsChineseError()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var source = Path.Combine(_testRoot, "原图.png");
+        File.WriteAllText(source, "original");
+        var service = CreateService();
+        var task = service.PrepareTask(new DuanxingTaskRequest(
+            source, Path.Combine(_testRoot, "输出"), "不能回退", 100, 100, 1270,
+            "平铺", "TIFF", "张三"));
+        var taskDirectory = Directory.GetParent(task.OutputDirectory)?.FullName
+            ?? throw new InvalidOperationException("Task directory was not created.");
+        File.WriteAllText(Path.Combine(task.OutputDirectory, "唯一版本.png"), "only");
+
+        var action = () => service.RestorePreviousResult(taskDirectory);
+
+        action.Should().Throw<InvalidOperationException>()
+            .WithMessage("*没有上一版可以恢复*");
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_testRoot))
